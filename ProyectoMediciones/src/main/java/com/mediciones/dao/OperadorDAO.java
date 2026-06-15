@@ -43,9 +43,8 @@ public class OperadorDAO {
      * @return true si la inserción fue exitosa, false en caso contrario.
      */
     private boolean insertar(Operador operador) {
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, operador.getNombre());
             pstmt.setString(2, operador.getIdentificacion());
 

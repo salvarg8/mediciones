@@ -15,9 +15,8 @@ public class ConfiguracionDAO {
                 "SELECT id, origen_datos, ruta_archivo " +
                         "FROM configuracion WHERE id = 1";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement ps = conn.prepareStatement(sql);
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             if (rs.next()) {
@@ -49,9 +48,8 @@ public class ConfiguracionDAO {
                         "origen_datos = VALUES(origen_datos), " +
                         "ruta_archivo = VALUES(ruta_archivo)";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, configuracion.getOrigenDatos());
             ps.setString(2, configuracion.getRutaArchivo());

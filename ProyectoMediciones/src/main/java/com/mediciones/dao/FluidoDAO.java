@@ -47,9 +47,8 @@ public class FluidoDAO {
      */
     public boolean insertar(Fluido fluido) {
         String sql = "INSERT INTO fluidos(nombre) VALUES(?)";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, fluido.getNombre());
 
             int affectedRows = pstmt.executeUpdate();
@@ -78,9 +77,8 @@ public class FluidoDAO {
      */
     public boolean actualizar(Fluido fluido) {
         String sql = "UPDATE fluidos SET nombre = ? WHERE id = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, fluido.getNombre());
             pstmt.setInt(2, fluido.getId());
             return pstmt.executeUpdate() > 0;
@@ -98,9 +96,8 @@ public class FluidoDAO {
      */
     public boolean eliminar(int id) {
         String sql = "DELETE FROM fluidos WHERE id = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {

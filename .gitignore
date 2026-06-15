@@ -1,0 +1,28 @@
+# Maven build outputs
+ProyectoMediciones/target/
+ProyectoMediciones/dependency-reduced-pom.xml
+
+# IDE files
+.idea/
+*.iml
+
+# Local database/runtime files
+ProyectoMediciones/mediciones_db.sqlite
+*.sqlite
+*.db
+
+# Generated reports
+*.xlsx
+!plantilla.xlsx
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# External deployment config files
+/Database.properties
+/ProyectoMediciones/Database.properties

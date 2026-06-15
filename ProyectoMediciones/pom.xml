@@ -86,7 +86,7 @@
     <build>
         <plugins>
 
-            <!-- Compilador para Java 19 -->
+            <!-- Compilador para Java 8 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -111,7 +111,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.mediciones.App</mainClass>
+                                    <mainClass>com.mediciones.App.App</mainClass>
                                 </transformer>
                             </transformers>
 

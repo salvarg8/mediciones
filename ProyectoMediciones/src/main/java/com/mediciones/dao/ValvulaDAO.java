@@ -25,9 +25,8 @@ public class ValvulaDAO {
                 "marca, material_cuerpo, entrada_rosca_tipo, entrada_brida_diametro, entrada_brida_serie, " +
                 "salida_rosca_tipo, salida_brida_diametro, salida_brida_serie) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
 
             // Asignar parámetros con manejo seguro de NULLs
             setNullableInt(pstmt, 1, (valvula.getCliente() != null) ? valvula.getCliente().getId() : null);
@@ -84,9 +83,8 @@ public class ValvulaDAO {
         String sql = "UPDATE valvulas SET cliente_id = ?, fluido_servicio_id = ?, tag = ?, numero_serie = ?, lugar_conexion = ?, " +
                 "marca = ?, material_cuerpo = ?, entrada_rosca_tipo = ?, entrada_brida_diametro = ?, entrada_brida_serie = ?, " +
                 "salida_rosca_tipo = ?, salida_brida_diametro = ?, salida_brida_serie = ? WHERE id = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             // Asignar parámetros con manejo seguro de NULLs
             setNullableInt(pstmt, 1, (valvula.getCliente() != null) ? valvula.getCliente().getId() : null);
@@ -122,9 +120,8 @@ public class ValvulaDAO {
      */
     public boolean eliminar(int id) {
         String sql = "DELETE FROM valvulas WHERE id = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
 
@@ -151,9 +148,8 @@ public class ValvulaDAO {
                 "LEFT JOIN clientes c ON v.cliente_id = c.id " +
                 "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (Statement stmt = conn.createStatement();
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
@@ -184,9 +180,8 @@ public class ValvulaDAO {
                 "LEFT JOIN clientes c ON v.cliente_id = c.id " +
                 "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
                 "WHERE v.id = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -214,9 +209,8 @@ public class ValvulaDAO {
      */
     public boolean existeDuplicada(int clienteId, String tag, String lugarConexion) {
         String sql = "SELECT COUNT(*) AS count FROM valvulas WHERE cliente_id = ? AND tag = ? AND lugar_conexion = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, clienteId);
             pstmt.setString(2, tag);
             pstmt.setString(3, lugarConexion);
@@ -253,9 +247,8 @@ public class ValvulaDAO {
                 "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
                 "WHERE v.cliente_id = ?";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, idCliente);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -286,9 +279,8 @@ public class ValvulaDAO {
                 "LEFT JOIN clientes c ON v.cliente_id = c.id " +
                 "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
                 "WHERE v.tag = ?";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, tag);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -315,9 +307,8 @@ public class ValvulaDAO {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT id, nombre FROM clientes";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (Statement stmt = conn.createStatement();
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
@@ -344,9 +335,8 @@ public class ValvulaDAO {
         List<Fluido> fluidos = new ArrayList<>();
         String sql = "SELECT id, nombre FROM fluidos";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try (Statement stmt = conn.createStatement();
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {

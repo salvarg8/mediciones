@@ -16,9 +16,7 @@ public class UbicacionDAO {
         String deleteSql = "DELETE FROM ubicacion";
         String insertSql = "INSERT INTO ubicacion (ubicacion) VALUES (?)";
 
-        Connection conn = DatabaseManager.getConnection();
-
-        try {
+        try (Connection conn = DatabaseManager.getConnection()) {
             // ✅ CORRECCIÓN: Usar transacción para atomicidad
             conn.setAutoCommit(false);
 
@@ -35,32 +33,25 @@ public class UbicacionDAO {
                 conn.commit();
                 System.out.println("✅ Ubicación guardada en BD: " + u.getUbicacion());
                 return true;
+            } catch (SQLException e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+                throw e;
             }
         } catch (SQLException e) {
-            // ✅ CORRECCIÓN: Rollback en caso de error
-            try {
-                if (conn != null) conn.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error al hacer rollback: " + ex.getMessage());
-            }
-
             System.err.println("❌ Error al guardar ubicación: " + e.getMessage());
             e.printStackTrace();
             return false;
-        } finally {
-            try {
-                if (conn != null) conn.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.err.println("Error al restablecer autocommit: " + e.getMessage());
-            }
         }
     }
 
     public Ubicacion obtener() {
         String sql = "SELECT ubicacion FROM ubicacion LIMIT 1";
-        Connection conn = DatabaseManager.getConnection();
-
-        try (Statement stmt = conn.createStatement();
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             if (rs.next()) {
