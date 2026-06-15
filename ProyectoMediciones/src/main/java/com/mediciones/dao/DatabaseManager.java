@@ -1,5 +1,8 @@
 package com.mediciones.dao;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -8,146 +11,173 @@ import java.sql.Statement;
 import java.util.Properties;
 
 /**
- * Clase para manejar la conexión a la base de datos MySQL.
- * Versión mejorada con sistema de configuración externa para conexión a servidores remotos.
+ * Administra la configuración y las conexiones a MySQL.
+ *
+ * <p>getConnection() solo abre una conexión nueva. La creación/actualización
+ * del esquema debe ejecutarse explícitamente con initializeDatabase().</p>
  */
-public class DatabaseManager {
+public final class DatabaseManager {
 
-    // Valores por defecto (se usarán si no hay archivo de configuración)
+    private static final String CONFIG_FILE = "Database.properties";
+
     private static final String DEFAULT_HOST = "localhost";
     private static final String DEFAULT_PORT = "3306";
     private static final String DEFAULT_DATABASE = "mediciones_db";
     private static final String DEFAULT_USER = "appuser";
-    private static final String DEFAULT_PASSWORD = "Sierra";
+    private static final String DEFAULT_PASSWORD = "";
+    private static final String DEFAULT_USE_SSL = "false";
+    private static final String DEFAULT_ALLOW_PUBLIC_KEY_RETRIEVAL = "true";
+    private static final String DEFAULT_SERVER_TIMEZONE = "UTC";
+    private static final String DEFAULT_CHARACTER_ENCODING = "UTF-8";
 
-    // Parámetros de configuración
-    private static String HOST;
-    private static String PORT;
-    private static String DATABASE;
-    private static String USER;
-    private static String PASSWORD;
-    private static String USE_SSL;
-    private static String ALLOW_PUBLIC_KEY_RETRIEVAL;
-    private static String SERVER_TIMEZONE;
-    private static String CHARACTER_ENCODING;
+    private static String host;
+    private static String port;
+    private static String database;
+    private static String user;
+    private static String password;
+    private static String useSSL;
+    private static String allowPublicKeyRetrieval;
+    private static String serverTimezone;
+    private static String characterEncoding;
 
-    private static Connection connection = null;
-
-    // Carga la configuración al iniciar la clase
     static {
         loadConfiguration();
+        loadDriver();
     }
 
-    /**
-     * Carga la configuración desde database.properties
-     */
+    private DatabaseManager() {
+    }
+
     private static void loadConfiguration() {
         Properties props = new Properties();
-        try (InputStream input = DatabaseManager.class
-                .getClassLoader()
-                .getResourceAsStream("Database.properties")) {
+        boolean loaded = loadExternalProperties(props);
 
-            if (input == null) {
-                System.out.println("⚠️ Archivo Database.properties no encontrado. Usando valores por defecto.");
-                useDefaultConfiguration();
-                return;
-            }
+        if (!loaded) {
+            loaded = loadClasspathProperties(props);
+        }
 
-            // Cargar propiedades
+        if (!loaded) {
+            System.out.println("⚠️ No se encontró " + CONFIG_FILE + ". Usando valores por defecto/entorno.");
+        }
+
+        host = getConfigValue(props, "db.host", "DB_HOST", DEFAULT_HOST);
+        port = getConfigValue(props, "db.port", "DB_PORT", DEFAULT_PORT);
+        database = getConfigValue(props, "db.database", "DB_DATABASE", DEFAULT_DATABASE);
+        user = getConfigValue(props, "db.user", "DB_USER", DEFAULT_USER);
+        password = getConfigValue(props, "db.password", "DB_PASSWORD", DEFAULT_PASSWORD);
+        useSSL = getConfigValue(props, "db.useSSL", "DB_USE_SSL", DEFAULT_USE_SSL);
+        allowPublicKeyRetrieval = getConfigValue(
+                props,
+                "db.allowPublicKeyRetrieval",
+                "DB_ALLOW_PUBLIC_KEY_RETRIEVAL",
+                DEFAULT_ALLOW_PUBLIC_KEY_RETRIEVAL
+        );
+        serverTimezone = getConfigValue(props, "db.serverTimezone", "DB_SERVER_TIMEZONE", DEFAULT_SERVER_TIMEZONE);
+        characterEncoding = getConfigValue(
+                props,
+                "db.characterEncoding",
+                "DB_CHARACTER_ENCODING",
+                DEFAULT_CHARACTER_ENCODING
+        );
+    }
+
+    private static boolean loadExternalProperties(Properties props) {
+        File externalFile = new File(CONFIG_FILE);
+        if (!externalFile.isFile()) {
+            return false;
+        }
+
+        try (InputStream input = new FileInputStream(externalFile)) {
             props.load(input);
-
-            // Obtener valores
-            HOST = props.getProperty("db.host", DEFAULT_HOST);
-            PORT = props.getProperty("db.port", DEFAULT_PORT);
-            DATABASE = props.getProperty("db.database", DEFAULT_DATABASE);
-            USER = props.getProperty("db.user", DEFAULT_USER);
-            PASSWORD = props.getProperty("db.password", DEFAULT_PASSWORD);
-            USE_SSL = props.getProperty("db.useSSL", "false");
-            ALLOW_PUBLIC_KEY_RETRIEVAL = props.getProperty("db.allowPublicKeyRetrieval", "true");
-            SERVER_TIMEZONE = props.getProperty("db.serverTimezone", "UTC");
-            CHARACTER_ENCODING = props.getProperty("db.characterEncoding", "UTF-8");
-
-            System.out.println("✅ Configuración cargada desde database.properties");
-
-        } catch (Exception ex) {
-            System.err.println("❌ Error al cargar configuración: " + ex.getMessage());
-            System.out.println("⚠️ Usando valores por defecto");
-            useDefaultConfiguration();
+            System.out.println("✅ Configuración cargada desde archivo externo: " + externalFile.getAbsolutePath());
+            return true;
+        } catch (IOException ex) {
+            System.err.println("⚠️ Error al cargar " + CONFIG_FILE + " externo: " + ex.getMessage());
+            return false;
         }
     }
 
-    /**
-     * Usa valores por defecto si no hay archivo de configuración
-     */
-    private static void useDefaultConfiguration() {
-        HOST = DEFAULT_HOST;
-        PORT = DEFAULT_PORT;
-        DATABASE = DEFAULT_DATABASE;
-        USER = DEFAULT_USER;
-        PASSWORD = DEFAULT_PASSWORD;
-        USE_SSL = "false";
-        ALLOW_PUBLIC_KEY_RETRIEVAL = "true";
-        SERVER_TIMEZONE = "UTC";
-        CHARACTER_ENCODING = "UTF-8";
+    private static boolean loadClasspathProperties(Properties props) {
+        try (InputStream input = DatabaseManager.class.getClassLoader().getResourceAsStream(CONFIG_FILE)) {
+            if (input == null) {
+                return false;
+            }
+            props.load(input);
+            System.out.println("✅ Configuración cargada desde " + CONFIG_FILE + " interno.");
+            return true;
+        } catch (IOException ex) {
+            System.err.println("⚠️ Error al cargar " + CONFIG_FILE + " interno: " + ex.getMessage());
+            return false;
+        }
     }
 
-    /**
-     * Construye la URL de conexión a MySQL
-     */
+    private static String getConfigValue(Properties props, String propertyKey, String environmentKey, String defaultValue) {
+        String environmentValue = System.getenv(environmentKey);
+        if (environmentValue != null && !environmentValue.trim().isEmpty()) {
+            return environmentValue.trim();
+        }
+
+        String propertyValue = props.getProperty(propertyKey);
+        if (propertyValue != null && !propertyValue.trim().isEmpty()) {
+            return propertyValue.trim();
+        }
+
+        return defaultValue;
+    }
+
+    private static void loadDriver() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException ex) {
+            throw new IllegalStateException("Driver JDBC de MySQL no encontrado.", ex);
+        }
+    }
+
     private static String buildConnectionUrl() {
         return String.format(
                 "jdbc:mysql://%s:%s/%s?useSSL=%s&allowPublicKeyRetrieval=%s&serverTimezone=%s&characterEncoding=%s",
-                HOST, PORT, DATABASE, USE_SSL, ALLOW_PUBLIC_KEY_RETRIEVAL,
-                SERVER_TIMEZONE, CHARACTER_ENCODING
+                host,
+                port,
+                database,
+                useSSL,
+                allowPublicKeyRetrieval,
+                serverTimezone,
+                characterEncoding
         );
     }
 
     public static Connection getConnection() {
         try {
-            // Cargar el driver JDBC
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            if (connection == null || connection.isClosed()) {
-                // Construir URL de conexión
-                String url = buildConnectionUrl();
-                System.out.println("🔌 Conectando a: " + url.replace(PASSWORD, "******"));
-
-                connection = DriverManager.getConnection(url, USER, PASSWORD);
-                System.out.println("✅ Conexión a MySQL establecida.");
-
-                createTablesIfNotExist(connection);
-                updateSchema(connection);
-            }
-        } catch (ClassNotFoundException e) {
-            System.err.println("❌ ERROR: Driver de MySQL no encontrado.");
-            e.printStackTrace();
-            throw new RuntimeException("Driver JDBC no cargado.", e);
-        } catch (SQLException e) {
-            System.err.println("❌ ERROR al conectar a MySQL: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Fallo crítico al conectar a MySQL.", e);
+            return DriverManager.getConnection(buildConnectionUrl(), user, password);
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Fallo al conectar a MySQL: " + ex.getMessage(), ex);
         }
-        return connection;
+    }
+
+    public static void initializeDatabase() {
+        try (Connection conn = getConnection()) {
+            createTablesIfNotExist(conn);
+            updateSchema(conn);
+            System.out.println("✅ Base de datos inicializada correctamente.");
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Error al inicializar la base de datos.", ex);
+        }
     }
 
     private static void createTablesIfNotExist(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-
-            // ✅ TABLA CLIENTES - CORREGIDA (TEXT → VARCHAR)
             stmt.execute("CREATE TABLE IF NOT EXISTS clientes (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(255) NOT NULL," +
                     "nit VARCHAR(50) UNIQUE NOT NULL" +
                     ") ENGINE=InnoDB;");
 
-            // ✅ TABLA OPERADOR - CORREGIDA (TEXT → VARCHAR)
             stmt.execute("CREATE TABLE IF NOT EXISTS operador (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(255) NOT NULL," +
                     "identificacion VARCHAR(50) UNIQUE NOT NULL" +
                     ") ENGINE=InnoDB;");
 
-            // ✅ TABLA FLUIDOS - CORREGIDA (TEXT → VARCHAR)
             stmt.execute("CREATE TABLE IF NOT EXISTS fluidos (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(100) NOT NULL UNIQUE," +
@@ -155,7 +185,6 @@ public class DatabaseManager {
                     "viscosidad REAL" +
                     ") ENGINE=InnoDB;");
 
-            // Tabla valvulas (sin cambios necesarios)
             stmt.execute("CREATE TABLE IF NOT EXISTS valvulas (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "cliente_id INT," +
@@ -171,11 +200,10 @@ public class DatabaseManager {
                     "salida_rosca_tipo TEXT," +
                     "salida_brida_diametro TEXT," +
                     "salida_brida_serie TEXT," +
-                    "FOREIGN KEY (cliente_id) REFERENCES clientes(id)," +
-                    "FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)" +
+                    "CONSTRAINT fk_valvulas_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id)," +
+                    "CONSTRAINT fk_valvulas_fluido FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)" +
                     ") ENGINE=InnoDB;");
 
-            // Tabla calibracion_sensores (sin cambios)
             stmt.execute("CREATE TABLE IF NOT EXISTS calibracion_sensores (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "sensor_type TEXT NOT NULL," +
@@ -190,66 +218,62 @@ public class DatabaseManager {
                     "fecha_calibracion TEXT" +
                     ") ENGINE=InnoDB;");
 
-            // Tabla ubicacion (sin cambios)
             stmt.execute("CREATE TABLE IF NOT EXISTS ubicacion (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "ubicacion TEXT NOT NULL" +
                     ") ENGINE=InnoDB;");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS configuracion (" +
-                    "    id INT AUTO_INCREMENT PRIMARY KEY," +
-                    "    origen_datos TEXT NOT NULL," +
-                    "    ruta_archivo TEXT" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "origen_datos TEXT NOT NULL," +
+                    "ruta_archivo TEXT" +
                     ") ENGINE=InnoDB;");
-
-            System.out.println("✅ Tablas de MySQL creadas correctamente.");
         }
     }
 
-    private static void updateSchema(Connection conn) {
+    private static void updateSchema(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            // Para valvulas: primero columnas, luego foreign keys
-            String[] valvulasUpdates = {
-                    "ALTER TABLE valvulas ADD COLUMN fluido_servicio_id INT",
-                    "ALTER TABLE valvulas ADD FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)",
-                    "ALTER TABLE valvulas ADD COLUMN entrada_rosca_tipo TEXT",
-                    "ALTER TABLE valvulas ADD COLUMN entrada_brida_diametro TEXT",
-                    "ALTER TABLE valvulas ADD COLUMN entrada_brida_serie TEXT",
-                    "ALTER TABLE valvulas ADD COLUMN salida_rosca_tipo TEXT",
-                    "ALTER TABLE valvulas ADD COLUMN salida_brida_diametro TEXT",
-                    "ALTER TABLE valvulas ADD COLUMN salida_brida_serie TEXT"
-            };
-
-            for (String sql : valvulasUpdates) {
-                try {
-                    stmt.execute(sql);
-                } catch (SQLException ignored) {}
-            }
-
-            // Para calibracion_sensores
-            String[] calibUpdates = {
-                    "ALTER TABLE calibracion_sensores ADD COLUMN a3 REAL",
-                    "ALTER TABLE calibracion_sensores ADD COLUMN c3 REAL"
-            };
-
-            for (String sql : calibUpdates) {
-                try {
-                    stmt.execute(sql);
-                } catch (SQLException ignored) {}
-            }
-        } catch (SQLException e) {
-            System.err.println("⚠️ Error al actualizar esquema MySQL: " + e.getMessage());
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN fluido_servicio_id INT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN entrada_rosca_tipo TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN entrada_brida_diametro TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN entrada_brida_serie TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN salida_rosca_tipo TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN salida_brida_diametro TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN salida_brida_serie TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE calibracion_sensores ADD COLUMN a3 REAL");
+            executeSchemaUpdate(stmt, "ALTER TABLE calibracion_sensores ADD COLUMN c3 REAL");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_fluido " +
+                    "FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)");
         }
     }
 
-    public static void closeConnection() {
+    private static void executeSchemaUpdate(Statement stmt, String sql) throws SQLException {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("🔌 Conexión a MySQL cerrada.");
+            stmt.execute(sql);
+        } catch (SQLException ex) {
+            if (isExpectedAlreadyAppliedError(ex)) {
+                return;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+            throw ex;
         }
+    }
+
+    private static boolean isExpectedAlreadyAppliedError(SQLException ex) {
+        int errorCode = ex.getErrorCode();
+        String message = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+        return errorCode == 1060
+                || errorCode == 1061
+                || errorCode == 1826
+                || message.contains("duplicate column")
+                || message.contains("duplicate key")
+                || message.contains("duplicate foreign key")
+                || message.contains("already exists");
+    }
+
+    /**
+     * Compatibilidad con llamadas existentes. Las conexiones se cierran por DAO.
+     */
+    public static void closeConnection() {
+        // No hay conexión global que cerrar.
     }
 }

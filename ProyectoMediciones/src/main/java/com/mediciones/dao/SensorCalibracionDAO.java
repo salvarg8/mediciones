@@ -24,9 +24,8 @@ public class SensorCalibracionDAO {
                 "(sensor_type, a1, c1, a2, c2, a3, c3, presion_conocida, voltaje_conocido, fecha_calibracion) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        Connection conexion = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conexion = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // Establecer parámetros
             pstmt.setString(1, calibracion.getSensorType());
             setNullableDouble(pstmt, 2, calibracion.getA1());
@@ -80,9 +79,8 @@ public class SensorCalibracionDAO {
     public SensorCalibracion obtenerUltimaCalibracionPorSensor(String sensorType) {
         String sql = "SELECT * FROM calibracion_sensores WHERE sensor_type = ? ORDER BY id DESC LIMIT 1";
 
-        Connection conexion = DatabaseManager.getConnection();
-
-        try (PreparedStatement pstmt = conexion.prepareStatement(sql)) {
+        try (Connection conexion = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conexion.prepareStatement(sql)) {
             pstmt.setString(1, sensorType);
             ResultSet rs = pstmt.executeQuery();
 

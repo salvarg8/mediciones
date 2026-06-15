@@ -22,7 +22,7 @@ public class App {
 
 
         // 1. Inicializar la conexión a la base de datos (ya no necesita try/catch)
-        DatabaseManager.getConnection();
+        DatabaseManager.initializeDatabase();
 
         // 2. Ejecutar la interfaz gráfica en el hilo de Swing (EDT)
         SwingUtilities.invokeLater(() -> {
