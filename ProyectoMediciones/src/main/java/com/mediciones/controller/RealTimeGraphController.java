@@ -9,6 +9,7 @@ import com.mediciones.model.SensorCalibracion;
 import com.mediciones.model.Ubicacion;
 import com.mediciones.model.Valvula;
 import com.mediciones.reportes.ExcelGenerator;
+import com.mediciones.repository.ArchivoNoEncontradoException;
 import com.mediciones.view.RealTimeGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,6 +154,10 @@ public class RealTimeGraphController {
     public void startDataCapture(JComboBox<String> portCombo, JComboBox<Integer> baudCombo,
                                  Cliente cliente, Valvula valvula, double currentPressureRequested) {
 
+        if (dataThread != null && dataThread.isAlive()) {
+            return;
+        }
+
         if (currentPressureRequested <= 0) {
             view.showErrorMessage("Ingrese un valor válido para la Presión Solicitada antes de iniciar la captura.");
             return;
@@ -267,7 +272,6 @@ public class RealTimeGraphController {
     }
 
     public void stopDataCapture(Valvula valvula, Operador operador, Fluido fluido) {
-        if (!running && csvDataPoints.isEmpty()) return;
         running = false;
 
         if (dataThread != null && dataThread.isAlive()) {
@@ -355,7 +359,7 @@ public class RealTimeGraphController {
             return;
         }
 
-        if (running) {
+        if (isRunning()) {
             stopDataCapture(valvula, operador, fluido);
         }
 
@@ -392,6 +396,9 @@ public class RealTimeGraphController {
             dao.recargarPortal();
             view.cargarClientes(dao.obtenerTodosClientes());
             view.showMessage("Portal recargado correctamente.");
+        } catch (ArchivoNoEncontradoException ex) {
+            view.showErrorMessage(ex.getMessage());
+            logger.error("Archivo no encontrado al recargar el portal: " + ex.getMessage(), ex);
         } catch (Exception ex) {
             view.showErrorMessage("Error al recargar el Portal:\n" + ex.getMessage());
             logger.error("Error al recargar el portal: " + ex.getMessage(), ex);
@@ -399,21 +406,29 @@ public class RealTimeGraphController {
     }
 
     public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido) {
-        dao.cargarComboBoxClientes(cmbCliente);
+        try {
+            dao.cargarComboBoxClientes(cmbCliente);
+        } catch (ArchivoNoEncontradoException ex) {
+            view.showErrorMessage("Error al cargar clientes: " + ex.getMessage());
+        }
         cmbOperador.setModel(new DefaultComboBoxModel<>(dao.obtenerTodosOperadores().toArray(new Operador[0])));
         cmbFluido.setModel(new DefaultComboBoxModel<>(dao.obtenerTodosFluidos().toArray(new Fluido[0])));
     }
 
     public void updateValvulas(JComboBox<Valvula> cmbValvula, Cliente cliente) {
-        dao.cargarComboBoxValvulas(cmbValvula, cliente != null ? cliente.getId() : null);
+        try {
+            dao.cargarComboBoxValvulas(cmbValvula, cliente != null ? cliente.getId() : null);
+        } catch (ArchivoNoEncontradoException ex) {
+            view.showErrorMessage("Error al cargar válvulas: " + ex.getMessage());
+        }
     }
 
     public boolean isRunning() {
-        return running;
+        return dataThread != null && dataThread.isAlive();
     }
 
     public void discardData() {
-        if (running) {
+        if (isRunning()) {
             stopDataCapture(null, null, null); // Stop but don't save
         }
         resetValues();

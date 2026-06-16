@@ -112,7 +112,7 @@ public final class DatabaseManager {
             System.out.println("✅ Configuración cargada desde " + CONFIG_FILE + " interno.");
             return true;
         } catch (IOException ex) {
-            logger.error("Error al cargar " + CONFIG_FILE + " interno: "+ ex.getMessage(), ex);
+            logger.error("Error al cargar " + CONFIG_FILE + " interno: " + ex.getMessage(), ex);
             return false;
         }
     }
@@ -135,6 +135,7 @@ public final class DatabaseManager {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException ex) {
+            logger.error("Driver JDBC de MySQL no encontrado.", ex);
             throw new IllegalStateException("Driver JDBC de MySQL no encontrado.", ex);
         }
     }
@@ -156,6 +157,7 @@ public final class DatabaseManager {
         try {
             return DriverManager.getConnection(buildConnectionUrl(), user, password);
         } catch (SQLException ex) {
+            logger.error("Fallo al conectar a MySQL" , ex );
             throw new IllegalStateException("Fallo al conectar a MySQL: " + ex.getMessage(), ex);
         }
     }
@@ -166,6 +168,7 @@ public final class DatabaseManager {
             updateSchema(conn);
             System.out.println("✅ Base de datos inicializada correctamente.");
         } catch (SQLException ex) {
+            logger.error("Error al inicializar la base de datos.",ex);
             throw new IllegalStateException("Error al inicializar la base de datos.", ex);
         }
     }

@@ -6,6 +6,7 @@ import com.mediciones.controller.FluidoController;
 import com.mediciones.controller.OperadorController;
 import com.mediciones.controller.ValvulaController;
 import com.mediciones.model.*;
+import com.mediciones.repository.ArchivoNoEncontradoException;
 import com.mediciones.repository.PortalRepository;
 
 import javax.swing.*;
@@ -39,7 +40,7 @@ public class RealTimeGraphDAO {
 
     // --- Métodos de acceso a datos (delegan a los controladores) ---
 
-    public List<Cliente> obtenerTodosClientes() {
+    public List<Cliente> obtenerTodosClientes() throws ArchivoNoEncontradoException {
 
         Configuracion config =
                 configuracionDAO.obtenerConfiguracion();
@@ -56,7 +57,7 @@ public class RealTimeGraphDAO {
         return clienteController.obtenerTodosClientes();
     }
 
-    public List<Valvula> obtenerValvulasPorCliente(int clienteId) {
+    public List<Valvula> obtenerValvulasPorCliente(int clienteId) throws ArchivoNoEncontradoException {
 
         Configuracion config =
                 configuracionDAO.obtenerConfiguracion();
@@ -97,7 +98,7 @@ public class RealTimeGraphDAO {
 
     // --- Métodos para cargar componentes UI ---
 
-    public void cargarComboBoxClientes(JComboBox<Cliente> cmbCliente) {
+    public void cargarComboBoxClientes(JComboBox<Cliente> cmbCliente) throws ArchivoNoEncontradoException {
         DefaultComboBoxModel<Cliente> clienteModel = new DefaultComboBoxModel<>();
         clienteModel.addElement(null); // Placeholder para selección nula
 
@@ -139,7 +140,7 @@ public class RealTimeGraphDAO {
         });
     }
 
-    public void cargarComboBoxValvulas(JComboBox<Valvula> cmbValvula, Integer clienteId) {
+    public void cargarComboBoxValvulas(JComboBox<Valvula> cmbValvula, Integer clienteId) throws ArchivoNoEncontradoException {
         DefaultComboBoxModel<Valvula> valvulaModel = new DefaultComboBoxModel<>();
         valvulaModel.addElement(null); // Placeholder
 
@@ -205,7 +206,7 @@ public class RealTimeGraphDAO {
         });
     }
 
-    public void recargarPortal() {
+    public void recargarPortal() throws ArchivoNoEncontradoException {
 
         Configuracion configuracion =
                 configuracionDAO.obtenerConfiguracion();

@@ -54,14 +54,15 @@ public class PortalRepository {
         return resultado;
     }
 
-    public void recargar(String rutaArchivo) {
+    public void recargar(String rutaArchivo) throws ArchivoNoEncontradoException {
         if (rutaArchivo == null || rutaArchivo.trim().isEmpty()) {
             return;
         }
 
         File archivo = new File(rutaArchivo);
         if (!archivo.exists() || !archivo.isFile()) {
-            return;
+            logger.error("error al recargar(), no existe archivo: " + rutaArchivo);
+            throw new ArchivoNoEncontradoException("El archivo de texto no se encuentra en la ruta especificada.");
         }
 
         List<Cliente> nuevosClientes = new ArrayList<>();
