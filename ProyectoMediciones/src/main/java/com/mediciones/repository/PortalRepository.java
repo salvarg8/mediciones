@@ -3,6 +3,9 @@ package com.mediciones.repository;
 import com.mediciones.model.Cliente;
 import com.mediciones.model.Fluido;
 import com.mediciones.model.Valvula;
+import com.mediciones.view.FrmOperadorCRUD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
@@ -14,6 +17,9 @@ public class PortalRepository {
     private Map<Integer, Cliente> clientesPorId;
     private Map<Integer, Valvula> valvulasPorId;
     private Map<Integer, List<Valvula>> valvulasPorCliente;
+
+    private static final Logger logger = LoggerFactory.getLogger(PortalRepository.class);
+
 
     public PortalRepository() {
         this.clientes = new ArrayList<>();
@@ -115,7 +121,7 @@ public class PortalRepository {
                 }
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            logger.error("error al recargar()", ex);
             return;
         }
 
@@ -176,7 +182,7 @@ public class PortalRepository {
 
             return new Cliente(codigo, nombre, nit);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("error al parsear cliente", ex);
             return null;
         }
     }
@@ -313,7 +319,7 @@ public class PortalRepository {
             return valvula;
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("error al parsear valvula", ex);
             return null;
         }
     }

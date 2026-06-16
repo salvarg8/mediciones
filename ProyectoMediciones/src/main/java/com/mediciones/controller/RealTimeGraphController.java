@@ -10,6 +10,8 @@ import com.mediciones.model.Ubicacion;
 import com.mediciones.model.Valvula;
 import com.mediciones.reportes.ExcelGenerator;
 import com.mediciones.view.RealTimeGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.Color;
@@ -45,6 +47,8 @@ public class RealTimeGraphController {
     private String selectedSensorType = "Motorola";
     private double pressureRequested = 0.0;
 
+    private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphController.class);
+
     public RealTimeGraphController(RealTimeGraph view) {
         this.view = view;
         this.dao = new RealTimeGraphDAO();
@@ -77,7 +81,7 @@ public class RealTimeGraphController {
             if (!comPort.openPort()) throw new IOException("No se pudo abrir el puerto.");
             view.setLedColor(Color.GREEN);
         } catch (Exception ex) {
-            view.showErrorMessage("Error al abrir el puerto");
+            logger.error("error al abrir el puerto. openSelectedPort() ", ex);
         }
     }
 
@@ -85,7 +89,7 @@ public class RealTimeGraphController {
         if (dataThread != null && dataThread.isAlive()) {
             dataThread.interrupt();
         }
-        
+
         if (comPort != null && comPort.isOpen()) {
             comPort.closePort();
             System.out.println("Puerto serial cerrado correctamente.");
@@ -101,7 +105,8 @@ public class RealTimeGraphController {
                 constanteC = (ucPresion.getC1() != null && selectedSensorType.equals("Motorola")) ? ucPresion.getC1() :
                         (ucPresion.getC2() != null && selectedSensorType.equals("Endress-Hauser")) ? ucPresion.getC2() : 0.0;
             } else {
-                factorA = 1.0; constanteC = 0.0;
+                factorA = 1.0;
+                constanteC = 0.0;
             }
 
             SensorCalibracion ucTemp = new SensorCalibracionController().obtenerUltimaCalibracionPorSensor("LM35");
@@ -118,9 +123,11 @@ public class RealTimeGraphController {
             if (factorATemp == 0) factorATemp = 1.0;
 
         } catch (Exception e) {
-            factorA = 1.0; constanteC = 0.0;
-            factorATemp = 1.0; constanteCTemp = 0.0;
-            e.printStackTrace();
+            factorA = 1.0;
+            constanteC = 0.0;
+            factorATemp = 1.0;
+            constanteCTemp = 0.0;
+            logger.error("error al cargar valores de calibración. loadCalibrationValues()", e);
         }
     }
 
@@ -143,9 +150,9 @@ public class RealTimeGraphController {
         this.pressureRequested = pressure;
     }
 
-    public void startDataCapture(JComboBox<String> portCombo, JComboBox<Integer> baudCombo, 
+    public void startDataCapture(JComboBox<String> portCombo, JComboBox<Integer> baudCombo,
                                  Cliente cliente, Valvula valvula, double currentPressureRequested) {
-        
+
         if (currentPressureRequested <= 0) {
             view.showErrorMessage("Ingrese un valor válido para la Presión Solicitada antes de iniciar la captura.");
             return;
@@ -175,8 +182,8 @@ public class RealTimeGraphController {
 
             resetValues();
             view.clearChart();
-            
-            running = false; 
+
+            running = false;
             view.setStartButtonText("Detener");
             view.setInfoFieldsEnabled(false);
 
@@ -192,16 +199,16 @@ public class RealTimeGraphController {
                         Thread.sleep(50);
                     }
                 } catch (InterruptedException e) {
-                    System.out.println("Hilo de captura interrumpido.");
+                    logger.error("Hilo de captura interrumpido. startDatacapture()", e);
                 } catch (Exception ex) {
-                    ex.printStackTrace();
-                    view.showErrorMessage("Error en la lectura del puerto");
+                    logger.error("Error en la lectura del puerto. startDatacapture()", ex);
                 } finally {
                     stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
                 }
             });
             dataThread.start();
         } catch (Exception ex) {
+            logger.error("error al iniciar la captura. startDataCapture()", ex);
             view.showErrorMessage("Error " + ex.getMessage());
             stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
         }
@@ -226,7 +233,7 @@ public class RealTimeGraphController {
                     if (pressureRequested > 0 && !running && finalP >= 0.76 * pressureRequested) {
                         running = true;
                         view.setStartButtonText("Detener");
-                        
+
                         double lowerBound = 0.76 * pressureRequested;
                         double upperBound = Math.max(lowerBound + 1, maxValue + 1);
                         view.setChartBounds(lowerBound, upperBound);
@@ -255,7 +262,8 @@ public class RealTimeGraphController {
                     }
                 });
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     public void stopDataCapture(Valvula valvula, Operador operador, Fluido fluido) {
@@ -285,7 +293,8 @@ public class RealTimeGraphController {
                         break;
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         if (startIndex == -1) {
@@ -295,7 +304,8 @@ public class RealTimeGraphController {
                 if (parts.length >= 1) {
                     startTime = Double.parseDouble(parts[0]);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         List<String> filteredDataPoints = new ArrayList<>();
@@ -309,10 +319,11 @@ public class RealTimeGraphController {
                     double adjustedTime = time - startTime;
                     filteredDataPoints.add(String.format("%.1f;%.2f;%.2f", adjustedTime, pressure, temperature).replace(",", "."));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
-        if(valvula != null && operador != null && fluido != null) {
+        if (valvula != null && operador != null && fluido != null) {
             try (Writer writer = new OutputStreamWriter(Files.newOutputStream(Paths.get(nombreUltimoArchivoCSV)), StandardCharsets.UTF_8)) {
                 writer.write("\uFEFF");
                 writer.write("Valvula ID;" + valvula.getId() + "\n");
@@ -323,10 +334,11 @@ public class RealTimeGraphController {
                 writer.write("Maximo;" + String.format("%.2f", maxValue).replace(",", ".") + "\n");
                 writer.write("Recuperacion;" + ((recValue == Double.MAX_VALUE || !maxReached) ? "0.00" : String.format("%.2f", recValue).replace(",", ".")) + "\n");
                 writer.write("\ntiempo_s;Presion (" + view.getSelectedPressureUnit() + ");temperatura\n");
-                synchronized(filteredDataPoints) {
+                synchronized (filteredDataPoints) {
                     for (String p : filteredDataPoints) writer.write(p + "\n");
                 }
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
 
         view.resetCaptureUI();
@@ -371,7 +383,7 @@ public class RealTimeGraphController {
 
         } catch (IOException ex) {
             view.showErrorMessage("Error al generar el reporte Excel: " + ex.getMessage());
-            ex.printStackTrace();
+            logger.error("Error al generar el reporte Excel: " + ex.getMessage(), ex);
         }
     }
 
@@ -382,7 +394,7 @@ public class RealTimeGraphController {
             view.showMessage("Portal recargado correctamente.");
         } catch (Exception ex) {
             view.showErrorMessage("Error al recargar el Portal:\n" + ex.getMessage());
-            ex.printStackTrace();
+            logger.error("Error al recargar el portal: " + ex.getMessage(), ex);
         }
     }
 
@@ -395,11 +407,11 @@ public class RealTimeGraphController {
     public void updateValvulas(JComboBox<Valvula> cmbValvula, Cliente cliente) {
         dao.cargarComboBoxValvulas(cmbValvula, cliente != null ? cliente.getId() : null);
     }
-    
+
     public boolean isRunning() {
         return running;
     }
-    
+
     public void discardData() {
         if (running) {
             stopDataCapture(null, null, null); // Stop but don't save

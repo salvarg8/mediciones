@@ -5,6 +5,9 @@ import com.mediciones.model.Valvula;
 import com.mediciones.model.Cliente;
 import com.mediciones.model.Fluido;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
@@ -76,6 +79,9 @@ public class FrmValvulasCRUD extends JFrame {
     private JPanel camposGeneralesPanel;
     private JPanel entradaPanel;
     private JPanel salidaPanel;
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmValvulasCRUD.class);
+
 
     /**
      * Constructor del formulario CRUD de Válvulas.
@@ -289,7 +295,7 @@ public class FrmValvulasCRUD extends JFrame {
                     "Error al cargar datos iniciales:",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al cargar datos iniciales:", ex);
         }
     }
 
@@ -314,7 +320,7 @@ public class FrmValvulasCRUD extends JFrame {
                     "Error al cargar las válvulas",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al cargar las válvulas", ex);
         }
     }
 
@@ -339,7 +345,7 @@ public class FrmValvulasCRUD extends JFrame {
                     "Error al cargar las válvulas del cliente",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al cargar las válvulas del cliente", ex);
         }
     }
 
@@ -438,7 +444,7 @@ public class FrmValvulasCRUD extends JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar", "Error Crítico", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error de sistema al guardar/actualizar", ex);
         }
     }
 
@@ -478,7 +484,7 @@ public class FrmValvulasCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al cargar los datos para edición", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione una válvula de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -514,7 +520,7 @@ public class FrmValvulasCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al obtener el ID de la válvula para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al obtener el ID de la válvula para eliminar", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione una válvula de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);

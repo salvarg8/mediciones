@@ -3,6 +3,9 @@ package com.mediciones.view;
 import com.mediciones.controller.FluidoController;
 import com.mediciones.model.Fluido;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
@@ -43,6 +46,9 @@ public class FrmFluidosCRUD extends JFrame {
     private int originalWidth = 600;
     private int originalHeight = 500;
     private JPanel contentPanel; // Panel contenedor para aplicar escalado
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmFluidosCRUD.class);
+
 
     /**
      * Constructor del formulario CRUD de Fluidos.
@@ -300,7 +306,7 @@ public class FrmFluidosCRUD extends JFrame {
                             "\nAsegúrese de que FluidoController y la BD estén funcionales.",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al cargar los fluidos", ex);
         }
     }
 
@@ -340,7 +346,7 @@ public class FrmFluidosCRUD extends JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar", "Error Crítico", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error de sistema al guardar/actualizar", ex);
         }
     }
 
@@ -363,7 +369,7 @@ public class FrmFluidosCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al cargar los datos para edición", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un fluido de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -401,7 +407,7 @@ public class FrmFluidosCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al obtener el ID del fluido para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al obtener el ID del fluido para eliminar", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un fluido de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);

@@ -1,6 +1,9 @@
 package com.mediciones.dao;
 
 import com.mediciones.model.Configuracion;
+import com.mediciones.view.FrmOperadorCRUD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,6 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ConfiguracionDAO {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConfiguracionDAO.class);
+
 
     public Configuracion obtenerConfiguracion() {
 
@@ -30,11 +36,8 @@ public class ConfiguracionDAO {
             }
 
         } catch (Exception ex) {
-
-            ex.printStackTrace();
-
+            logger.error("Error al obtener configuracion", ex);
         }
-
         return null;
     }
 
@@ -58,8 +61,7 @@ public class ConfiguracionDAO {
 
         } catch (SQLException e) {
 
-            System.err.println("Error al guardar configuración: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al guardarConfiguracion", e);
 
             return false;
         }

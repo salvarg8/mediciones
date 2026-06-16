@@ -3,6 +3,9 @@ package com.mediciones.view;
 import com.mediciones.controller.ClienteController;
 import com.mediciones.model.Cliente;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
@@ -28,15 +31,15 @@ public class FrmClienteCRUD extends JFrame {
     // Componentes de la UI para el formulario de entrada
     private JTextField txtNombre;
     private JTextField txtNit;
-    private Button3D btnGuardar; 
-    private Button3D btnCancelar; 
+    private Button3D btnGuardar;
+    private Button3D btnCancelar;
 
     // Componentes para la tabla de visualización
     private JTable tblClientes;
     private DefaultTableModel tableModel;
-    private Button3D btnActualizar; 
-    private Button3D btnEditar; 
-    private Button3D btnEliminar; 
+    private Button3D btnActualizar;
+    private Button3D btnEditar;
+    private Button3D btnEliminar;
 
     private final ClienteController controller;
     private Cliente clienteSeleccionado;
@@ -45,6 +48,8 @@ public class FrmClienteCRUD extends JFrame {
     private int originalWidth = 600;
     private int originalHeight = 500;
     private JPanel contentPanel; // Panel contenedor para aplicar escalado
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmClienteCRUD.class);
 
     /**
      * Constructor del formulario CRUD de Clientes.
@@ -103,7 +108,7 @@ public class FrmClienteCRUD extends JFrame {
         int scaledGap = (int) (5 * scaleFactor);   // Base gap
 
         // Fuente escalada
-        Font scaledFont = new Font("Segoe UI", Font.BOLD, (int)(14 * scaleFactor));
+        Font scaledFont = new Font("Segoe UI", Font.BOLD, (int) (14 * scaleFactor));
 
         // Ajustar fuente de las etiquetas
         lblNombre.setFont(scaledFont);
@@ -116,7 +121,7 @@ public class FrmClienteCRUD extends JFrame {
         btnEliminar.setFont(scaledFont);
         btnActualizar.setFont(scaledFont);
         tblClientes.setFont(scaledFont);
-        tblClientes.setRowHeight((int)(25 * scaleFactor));
+        tblClientes.setRowHeight((int) (25 * scaleFactor));
 
         // Ajustar fuente de los títulos de los bordes
         formBorder.setTitleFont(scaledFont);
@@ -129,7 +134,7 @@ public class FrmClienteCRUD extends JFrame {
         // Ajustar tabla
         if (tblClientes.getColumnModel().getColumnCount() > 0) {
             for (int i = 0; i < tblClientes.getColumnModel().getColumnCount(); i++) {
-                tblClientes.getColumnModel().getColumn(i).setPreferredWidth((int)(100 * scaleFactor));
+                tblClientes.getColumnModel().getColumn(i).setPreferredWidth((int) (100 * scaleFactor));
             }
         }
 
@@ -163,24 +168,28 @@ public class FrmClienteCRUD extends JFrame {
         formPanel.setBorder(formBorder);
 
         // Etiqueta y campo Nombre (sin ":")
-        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.insets = new Insets(6, 10, 6, 4);
         lblNombre = new JLabel("Nombre:"); // Guardar referencia
         lblNombre.setFont(baseFont);
         formPanel.add(lblNombre, gbc);
         txtNombre = new JTextField(20);
-        gbc.gridx = 1; gbc.gridy = 0;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
         gbc.insets = new Insets(6, 4, 6, 10);
         gbc.weightx = 1.0;
         formPanel.add(txtNombre, gbc);
 
         // Etiqueta y campo DNI (sin ":")
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         lblNit = new JLabel("   DNI:"); // Guardar referencia
         lblNit.setFont(baseFont);
         formPanel.add(lblNit, gbc);
         txtNit = new JTextField(20);
-        gbc.gridx = 1; gbc.gridy = 1;
+        gbc.gridx = 1;
+        gbc.gridy = 1;
         gbc.weightx = 1.0;
         formPanel.add(txtNit, gbc);
 
@@ -192,7 +201,8 @@ public class FrmClienteCRUD extends JFrame {
         formButtonPanel.add(btnGuardar);
         formButtonPanel.add(btnCancelar);
 
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
         gbc.gridwidth = 2;
         gbc.weightx = 0;
         formPanel.add(formButtonPanel, gbc);
@@ -211,6 +221,7 @@ public class FrmClienteCRUD extends JFrame {
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
+
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return columnIndex == 0 ? Integer.class : String.class;
@@ -302,21 +313,13 @@ public class FrmClienteCRUD extends JFrame {
             List<Cliente> clientes = controller.obtenerTodosClientes();
 
             for (Cliente cliente : clientes) {
-                Object[] rowData = new Object[] {
-                        cliente.getId(),
-                        cliente.getNombre(),
-                        cliente.getNit()
-                };
+                Object[] rowData = new Object[]{cliente.getId(), cliente.getNombre(), cliente.getNit()};
                 tableModel.addRow(rowData);
             }
             limpiarFormulario();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al cargar los clientes" +
-                            "\nAsegúrese de que ClienteController y la BD estén funcionales.",
-                    "Error de Carga",
-                    JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al cargar los clientes" + "\nAsegúrese de que ClienteController y la BD estén funcionales.", "Error de Carga", JOptionPane.ERROR_MESSAGE);
+            logger.error("Error al cargar los clientes", ex);
         }
     }
 
@@ -358,7 +361,7 @@ public class FrmClienteCRUD extends JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar", "Error Crítico", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("error en btnGuardarActionPerformed()", ex);
         }
     }
 
@@ -383,7 +386,7 @@ public class FrmClienteCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("error en btnGuardarActionPerformed()", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un cliente de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -402,12 +405,7 @@ public class FrmClienteCRUD extends JFrame {
                 int idCliente = (int) tblClientes.getValueAt(filaSeleccionada, 0);
                 String nombreCliente = (String) tblClientes.getValueAt(filaSeleccionada, 1);
 
-                int confirmacion = JOptionPane.showConfirmDialog(
-                        this,
-                        "¿Está seguro de que desea eliminar al cliente: " + nombreCliente + " (ID: " + idCliente + ")?",
-                        "Confirmar Eliminación",
-                        JOptionPane.YES_NO_OPTION
-                );
+                int confirmacion = JOptionPane.showConfirmDialog(this, "¿Está seguro de que desea eliminar al cliente: " + nombreCliente + " (ID: " + idCliente + ")?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
 
                 if (confirmacion == JOptionPane.YES_OPTION) {
                     if (controller.eliminarCliente(idCliente)) {
@@ -421,7 +419,7 @@ public class FrmClienteCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al obtener el ID del cliente para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("error en btnEliminarActionPerformed()", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un cliente de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);

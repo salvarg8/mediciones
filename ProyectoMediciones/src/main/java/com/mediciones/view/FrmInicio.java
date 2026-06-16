@@ -11,6 +11,8 @@ import javax.swing.border.LineBorder;
 
 import com.mediciones.controller.FrmInicioController;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FrmInicio extends JFrame implements ActionListener {
 
@@ -45,6 +47,9 @@ public class FrmInicio extends JFrame implements ActionListener {
     private static final float BASE_FONT_SENSOR = 30f;
     private Map<Component, Font> originalFonts = new HashMap<>();
 
+    private static final Logger logger = LoggerFactory.getLogger(FrmInicio.class);
+
+
     public FrmInicio() {
         this.controller = new FrmInicioController(this);
 
@@ -68,7 +73,7 @@ public class FrmInicio extends JFrame implements ActionListener {
                     iniciarComunicacionSerial();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Error al iniciar la aplicación", e);
             }
         });
 
@@ -349,7 +354,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error al configurar el Look and Feel", e);
         }
 
         SwingUtilities.invokeLater(() -> {

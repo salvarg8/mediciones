@@ -3,6 +3,9 @@ package com.mediciones.view;
 import com.mediciones.controller.ConfiguracionController;
 import com.mediciones.model.Configuracion;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -29,6 +32,8 @@ public class FrmConfiguracion extends JFrame {
 
     // Controller
     private final ConfiguracionController controller;
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmConfiguracion.class);
 
     public FrmConfiguracion() {
 
@@ -214,7 +219,7 @@ public class FrmConfiguracion extends JFrame {
                     "Error",
                     JOptionPane.ERROR_MESSAGE
             );
-            ex.printStackTrace();
+            logger.error("Error al cargar la configuración", ex);
         }
     }
 

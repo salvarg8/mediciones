@@ -15,6 +15,9 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
@@ -48,6 +51,8 @@ public class RealTimeGraph extends JFrame {
     private JComboBox<String> cmbSensor;
     private JPanel indicatorPanel;
     private JTextField pressureRequestedField;
+
+    private static final Logger logger = LoggerFactory.getLogger(RealTimeGraph.class);
 
     public RealTimeGraph() {
         this.controller = new RealTimeGraphController(this);
@@ -303,6 +308,7 @@ public class RealTimeGraph extends JFrame {
                 }
             } catch (NumberFormatException ex) {
                 showErrorMessage("Ingrese un valor numérico válido para la Presión Solicitada.");
+                logger.error("Error al actualizar la Presión Solicitada", ex);
             }
         } else {
             controller.updatePressureRequestedValue(0.0);

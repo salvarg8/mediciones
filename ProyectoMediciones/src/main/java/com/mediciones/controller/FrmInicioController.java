@@ -9,11 +9,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FrmInicioController {
+    private static final Logger LOGGER = Logger.getLogger(FrmInicioController.class.getName());
     private final FrmInicio view;
     private final SensorCalibracionController calibracionController;
-    private final ConfiguracionController configuracionController;
     private final UbicacionController ubicacionController;
 
     private SerialPort comPort;
@@ -26,11 +28,11 @@ public class FrmInicioController {
     public FrmInicioController(FrmInicio view) {
         this.view = view;
         this.calibracionController = new SensorCalibracionController();
-        this.configuracionController = new ConfiguracionController();
         this.ubicacionController = new UbicacionController();
     }
 
     public boolean existeConfiguracion() {
+        ConfiguracionController configuracionController = new ConfiguracionController();
         return configuracionController.existeConfiguracion();
     }
 
@@ -47,7 +49,7 @@ public class FrmInicioController {
                 c2 = (calibE.getC2() != null) ? calibE.getC2() : 0.0;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al cargar las constantes de calibración", e);
         }
     }
 
@@ -68,6 +70,7 @@ public class FrmInicioController {
         if (capturing) detenerComunicacionSerial();
         SerialPort[] ports = SerialPort.getCommPorts();
         if (ports.length == 0) { 
+            LOGGER.warning("No se encontraron puertos seriales disponibles.");
             view.setEstadoComunicacion(false); 
             return; 
         }
@@ -91,12 +94,14 @@ public class FrmInicioController {
                         Thread.sleep(50);
                     }
                 } catch (Exception ex) {
+                    LOGGER.log(Level.SEVERE, "Error durante la captura de datos seriales", ex);
                     SwingUtilities.invokeLater(() -> view.setEstadoComunicacion(false));
                 }
             });
             captureThread.setDaemon(true);
             captureThread.start();
         } else {
+            LOGGER.severe("No se pudo abrir el puerto serial: " + comPort.getSystemPortName());
             view.setEstadoComunicacion(false);
         }
     }
@@ -125,7 +130,9 @@ public class FrmInicioController {
                     updateEndress.accept(pr2 * factorEscala);
                 });
             }
-        } catch (Exception ignored) {}
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            LOGGER.log(Level.WARNING, "Error al procesar la línea de datos seriales: '" + rawLine + "'", e);
+        }
     }
 
     public void openFrmReportes(JFrame parentComponent) {
@@ -150,6 +157,7 @@ public class FrmInicioController {
                         JOptionPane.INFORMATION_MESSAGE
                 );
             } else {
+                LOGGER.severe("No se pudo guardar la ubicación del reporte: " + ruta);
                 JOptionPane.showMessageDialog(
                         parentComponent,
                         "No se pudo guardar la ubicación.",

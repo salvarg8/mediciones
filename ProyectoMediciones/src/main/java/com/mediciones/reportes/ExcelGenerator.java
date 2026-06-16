@@ -1,5 +1,6 @@
 package com.mediciones.reportes;
 
+import com.mediciones.view.FrmOperadorCRUD;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
@@ -21,6 +22,8 @@ import com.mediciones.model.Cliente;
 import java.util.Date;
 import com.mediciones.controller.UbicacionController;
 import com.mediciones.model.Ubicacion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExcelGenerator {
 
@@ -33,6 +36,9 @@ public class ExcelGenerator {
     private String nombreOperadorCSV = "";
     private String nombreFluidoCSV = "";
     private Double presionAperturaSolicitada;
+
+    private static final Logger logger = LoggerFactory.getLogger(ExcelGenerator.class);
+
 
     public ExcelGenerator() {
     }
@@ -124,7 +130,7 @@ public class ExcelGenerator {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error leyendo ID de válvula desde CSV: " + e.getMessage());
+            logger.error("Error leyendo ID de válvula desde CSV: " + e);
         }
         return -1;
     }

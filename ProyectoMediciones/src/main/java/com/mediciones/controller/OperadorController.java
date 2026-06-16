@@ -2,6 +2,7 @@ package com.mediciones.controller;
 
 import com.mediciones.dao.OperadorDAO; // Asegúrate de que esta clase exista
 import com.mediciones.model.Operador; // Asegúrate de que esta clase exista
+
 import java.util.List;
 
 /**
@@ -19,6 +20,7 @@ public class OperadorController {
 
     /**
      * Busca un operador por su nombre.
+     *
      * @param nombre El nombre del operador a buscar.
      * @return El operador encontrado, o null si no se encuentra.
      */
@@ -35,6 +37,7 @@ public class OperadorController {
 
     /**
      * Guarda un nuevo Operador o actualiza uno existente.
+     *
      * @param operador El objeto Operador a guardar o actualizar.
      * @return true si la operación fue exitosa, false en caso contrario.
      */
@@ -45,6 +48,7 @@ public class OperadorController {
 
     /**
      * Obtiene todos los Operadores de la base de datos.
+     *
      * @return Una lista de objetos Operador.
      */
     public List<Operador> obtenerTodosOperadores() {
@@ -53,6 +57,7 @@ public class OperadorController {
 
     /**
      * Elimina un Operador por su ID.
+     *
      * @param id El ID del Operador a eliminar.
      * @return true si la eliminación fue exitosa, false en caso contrario.
      */

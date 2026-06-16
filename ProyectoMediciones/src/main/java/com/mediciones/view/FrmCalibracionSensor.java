@@ -4,6 +4,8 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.controller.SensorCalibracionController;
 import com.mediciones.model.SensorCalibracion;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -45,6 +47,8 @@ public class FrmCalibracionSensor extends JFrame {
     private JLabel lblC;
 
     private JPanel puntosPanel;
+
+    private static final Logger logger = LoggerFactory.getLogger(FrmCalibracionSensor.class);
 
     public FrmCalibracionSensor() {
         this.calibracionController = new SensorCalibracionController();
@@ -229,6 +233,7 @@ public class FrmCalibracionSensor extends JFrame {
                 else { a3 = a; c3 = 0.0; } // ⭐️ c3 siempre 0 para LM35
                 lblAValue.setText(String.format("%.6f", a)); lblCValue.setText(String.format("%.6f", c));
             } catch (Exception ex) {
+                logger.error("valor 2 inválido", ex);
                 JOptionPane.showMessageDialog(this, "Valor 2 inválido.");
             }
         });
@@ -263,7 +268,7 @@ public class FrmCalibracionSensor extends JFrame {
             if (!comPort.openPort()) return false;
             Thread.sleep(1000); startVoltageCapture(); return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("error en startPortIfNotOpen()", ex);
             return false;
         }
     }
@@ -321,7 +326,7 @@ public class FrmCalibracionSensor extends JFrame {
             double c = selectedSensor.equals("Motorola") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : c3);
             lblAValue.setText(String.format("%.6f", a)); lblCValue.setText(String.format("%.6f", c));
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Error en loadCurrentCalibration()",ex);
         }
     }
 

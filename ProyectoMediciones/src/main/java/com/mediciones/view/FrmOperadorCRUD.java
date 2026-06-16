@@ -3,6 +3,9 @@ package com.mediciones.view;
 import com.mediciones.controller.OperadorController;
 import com.mediciones.model.Operador;
 import com.mediciones.view.components.Button3D;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
@@ -46,10 +49,10 @@ public class FrmOperadorCRUD extends JFrame {
     private int originalHeight = 500;
     private JPanel contentPanel; // Panel contenedor para aplicar escalado
 
+    private static final Logger logger = LoggerFactory.getLogger(FrmOperadorCRUD.class);
+
     /**
      * Constructor del formulario CRUD de Operadores.
-     * @param parent El marco padre.
-     * @param modal Define si la ventana es modal (bloquea la ventana padre).
      */
     public FrmOperadorCRUD() {
         super("Gestión de Operadores");
@@ -318,7 +321,7 @@ public class FrmOperadorCRUD extends JFrame {
                             "\nAsegúrese de que OperadorController y la BD estén funcionales.",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al cargar los operadores", ex);
         }
     }
 
@@ -360,7 +363,7 @@ public class FrmOperadorCRUD extends JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar ", "Error Crítico", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.error("Error al guardar/actualizar el operador", ex);
         }
     }
 
@@ -385,7 +388,7 @@ public class FrmOperadorCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición " , "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al cargar los datos para edición", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un operador de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -423,7 +426,7 @@ public class FrmOperadorCRUD extends JFrame {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al obtener el ID del operador para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
+                logger.error("Error al obtener el ID del operador para eliminar", ex);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Por favor, seleccione un operador de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);

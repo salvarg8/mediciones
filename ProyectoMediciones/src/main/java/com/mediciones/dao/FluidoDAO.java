@@ -1,6 +1,10 @@
 package com.mediciones.dao;
 
 import com.mediciones.model.Fluido;
+import com.mediciones.view.FrmOperadorCRUD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +18,8 @@ import java.util.List;
  * Versión corregida para funcionar con MySQL.
  */
 public class FluidoDAO {
+
+    private static final Logger logger = LoggerFactory.getLogger(FluidoDAO.class);
 
     /**
      * Obtiene todos los fluidos desde la base de datos.

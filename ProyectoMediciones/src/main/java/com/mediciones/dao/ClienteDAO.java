@@ -2,6 +2,10 @@ package com.mediciones.dao;
 
 import com.mediciones.model.Cliente;
 import com.mediciones.dao.DatabaseManager;
+import com.mediciones.view.FrmOperadorCRUD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,7 +20,8 @@ import java.util.List;
  */
 public class ClienteDAO {
 
-    // --- Método INSERTAR (CORREGIDO PARA MYSQL) ---
+    private static final Logger logger = LoggerFactory.getLogger(ClienteDAO.class);
+
     public boolean insertar(Cliente cliente) {
         String insertSql = "INSERT INTO clientes(nombre, nit) VALUES(?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
@@ -27,7 +32,6 @@ public class ClienteDAO {
             int affectedRows = pstmt.executeUpdate();
 
             if (affectedRows > 0) {
-                // ✅ CORRECCIÓN: Usar getGeneratedKeys() (compatible con MySQL)
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         cliente.setId(generatedKeys.getInt(1));
@@ -37,13 +41,11 @@ public class ClienteDAO {
             }
             return false;
         } catch (SQLException e) {
-            System.err.println("Error al insertar cliente: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al insertar cliente: " + e.getMessage(), e);
             return false;
         }
     }
 
-    // --- Método ACTUALIZAR (CORREGIDO) ---
     public boolean actualizar(Cliente cliente) {
         String sql = "UPDATE clientes SET nombre = ?, nit = ? WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
@@ -54,13 +56,11 @@ public class ClienteDAO {
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Error al actualizar cliente: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al actualizar cliente: " + e.getMessage(),e);
             return false;
         }
     }
 
-    // --- Método ELIMINAR (CORREGIDO) ---
     public boolean eliminar(int id) {
         String sql = "DELETE FROM clientes WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
@@ -68,13 +68,11 @@ public class ClienteDAO {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Error al eliminar cliente: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al eliminar cliente: " + e.getMessage(),e);
             return false;
         }
     }
 
-    // --- Método OBTENER TODOS LOS CLIENTES (CORREGIDO) ---
     public List<Cliente> obtenerTodos() {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT id, nombre, nit FROM clientes";
@@ -90,13 +88,11 @@ public class ClienteDAO {
                 ));
             }
         } catch (SQLException e) {
-            System.err.println("Error al obtener clientes: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al obtener todos los clientes: " + e.getMessage(),e);
         }
         return clientes;
     }
 
-    // --- Método OBTENER CLIENTE POR ID (CORREGIDO) ---
     public Cliente obtenerPorId(int id) {
         String sql = "SELECT id, nombre, nit FROM clientes WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
@@ -113,8 +109,7 @@ public class ClienteDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al obtener cliente por ID: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al obtener cliente: " + e.getMessage(),e);
         }
         return null;
     }

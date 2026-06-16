@@ -1,5 +1,9 @@
 package com.mediciones.dao;
 
+import com.mediciones.view.FrmOperadorCRUD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -39,6 +43,8 @@ public final class DatabaseManager {
     private static String allowPublicKeyRetrieval;
     private static String serverTimezone;
     private static String characterEncoding;
+
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
 
     static {
         loadConfiguration();
@@ -92,7 +98,7 @@ public final class DatabaseManager {
             System.out.println("✅ Configuración cargada desde archivo externo: " + externalFile.getAbsolutePath());
             return true;
         } catch (IOException ex) {
-            System.err.println("⚠️ Error al cargar " + CONFIG_FILE + " externo: " + ex.getMessage());
+            logger.error("⚠️ Error al cargar " + CONFIG_FILE + " externo: " + ex.getMessage(), ex);
             return false;
         }
     }
@@ -106,7 +112,7 @@ public final class DatabaseManager {
             System.out.println("✅ Configuración cargada desde " + CONFIG_FILE + " interno.");
             return true;
         } catch (IOException ex) {
-            System.err.println("⚠️ Error al cargar " + CONFIG_FILE + " interno: " + ex.getMessage());
+            logger.error("Error al cargar " + CONFIG_FILE + " interno: "+ ex.getMessage(), ex);
             return false;
         }
     }
