@@ -350,8 +350,10 @@ public class RealTimeGraph extends JFrame {
                 try {
                     pressure = Double.parseDouble(pressureRequestedField.getText().trim());
                 } catch(Exception ignored){}
-                controller.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
-                //controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                // Metodo simula mediciones.
+                //controller.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                // Captura de datos correcta.
+                controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
             } else {
                 controller.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
             }
