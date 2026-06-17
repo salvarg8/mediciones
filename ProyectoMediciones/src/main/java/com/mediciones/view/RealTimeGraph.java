@@ -350,7 +350,8 @@ public class RealTimeGraph extends JFrame {
                 try {
                     pressure = Double.parseDouble(pressureRequestedField.getText().trim());
                 } catch(Exception ignored){}
-                controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                controller.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                //controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
             } else {
                 controller.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
             }
@@ -445,6 +446,7 @@ public class RealTimeGraph extends JFrame {
         }
     }
 
+
     public String getSelectedPressureUnit() {
         return selectedPressureUnit;
     }
@@ -456,5 +458,7 @@ public class RealTimeGraph extends JFrame {
     public Fluido getSelectedFluido() {
         return (Fluido) cmbFluido.getSelectedItem();
     }
+
+
 
 }

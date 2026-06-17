@@ -396,9 +396,6 @@ public class RealTimeGraphController {
             dao.recargarPortal();
             view.cargarClientes(dao.obtenerTodosClientes());
             view.showMessage("Portal recargado correctamente.");
-        } catch (ArchivoNoEncontradoException ex) {
-            view.showErrorMessage(ex.getMessage());
-            logger.error("Archivo no encontrado al recargar el portal: " + ex.getMessage(), ex);
         } catch (Exception ex) {
             view.showErrorMessage("Error al recargar el Portal:\n" + ex.getMessage());
             logger.error("Error al recargar el portal: " + ex.getMessage(), ex);
@@ -408,7 +405,7 @@ public class RealTimeGraphController {
     public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido) {
         try {
             dao.cargarComboBoxClientes(cmbCliente);
-        } catch (ArchivoNoEncontradoException ex) {
+        } catch (Exception ex) {
             view.showErrorMessage("Error al cargar clientes: " + ex.getMessage());
         }
         cmbOperador.setModel(new DefaultComboBoxModel<>(dao.obtenerTodosOperadores().toArray(new Operador[0])));
@@ -418,7 +415,7 @@ public class RealTimeGraphController {
     public void updateValvulas(JComboBox<Valvula> cmbValvula, Cliente cliente) {
         try {
             dao.cargarComboBoxValvulas(cmbValvula, cliente != null ? cliente.getId() : null);
-        } catch (ArchivoNoEncontradoException ex) {
+        } catch (Exception ex) {
             view.showErrorMessage("Error al cargar válvulas: " + ex.getMessage());
         }
     }
@@ -434,5 +431,85 @@ public class RealTimeGraphController {
         resetValues();
         view.clearChart();
         view.showMessage("Datos descartados y gráfico limpiado.");
+    }
+
+    public void startSimulatedDataCapture(Cliente cliente, Valvula valvula, double currentPressureRequested) {
+         logger.info("inicio simulacion");
+        if (dataThread != null && dataThread.isAlive()) {
+            return;
+        }
+
+        if (currentPressureRequested <= 0) {
+            view.showErrorMessage("Ingrese un valor válido para la Presión Solicitada antes de iniciar la simulación.");
+            return;
+        }
+
+        this.pressureRequested = currentPressureRequested;
+
+        try {
+            // Indicador visual para saber que estás en simulación
+            view.setLedColor(Color.ORANGE);
+
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            // Le agrego "-SIMULADO-" al nombre del archivo para no confundirlo con mediciones reales
+            String fileName = cliente.getNombre().replace(" ", "-") + "-"
+                    + valvula.getTag().replace(" ", "-") + "-SIMULADO-" + timestamp + ".csv";
+
+            Ubicacion u = ubicacionController.obtenerUbicacion();
+            nombreUltimoArchivoCSV = (u != null && u.getUbicacion() != null)
+                    ? new File(new File(u.getUbicacion()), fileName).getAbsolutePath()
+                    : fileName;
+
+            resetValues();
+            view.clearChart();
+
+            running = false;
+            view.setStartButtonText("Detener (Simulando)");
+            view.setInfoFieldsEnabled(false);
+
+            dataThread = new Thread(() -> {
+                try {
+                    double simulatedTime = 0.0;
+                    double simulatedVolt = constanteC; // Empieza en voltaje base para que Presión sea 0
+
+                    // Calculamos el voltaje objetivo para superar el 100% de la presión solicitada
+                    double targetVolt = (pressureRequested / factorA) + constanteC + 0.2;
+
+                    while (!Thread.currentThread().isInterrupted()) {
+                        // Curva de subida de presión
+                        if (simulatedVolt < targetVolt) {
+                            simulatedVolt += 0.02 + (Math.random() * 0.01);
+                        } else {
+                            // Fluctuación leve una vez que alcanza el máximo
+                            simulatedVolt += (Math.random() * 0.02) - 0.01;
+                        }
+
+                        // Temperatura simulada oscilando entre 24 y 26 grados
+                        double tempRaw = (25.0 / factorATemp) + constanteCTemp + (Math.random() * 2.0 - 1.0);
+
+                        // String idéntico al que enviaría el microcontrolador
+                        String simulatedData = String.format(java.util.Locale.US, "%.1f,%.4f,%.4f,%.2f",
+                                simulatedTime, simulatedVolt, simulatedVolt, tempRaw);
+
+                        processNewData(simulatedData);
+
+                        simulatedTime += 0.1; // Avanzamos el tiempo simulado
+                        Thread.sleep(100);    // Pausa real del hilo (100ms)
+                    }
+                } catch (InterruptedException e) {
+                    logger.info("Hilo de simulación detenido.");
+                } catch (Exception ex) {
+                    logger.error("Error durante la simulación.", ex);
+                } finally {
+                    stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
+                }
+            });
+            dataThread.start();
+
+        } catch (Exception ex) {
+            logger.error("Error al iniciar la simulación", ex);
+            view.showErrorMessage("Error al iniciar simulación: " + ex.getMessage());
+            stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
+        }
     }
 }

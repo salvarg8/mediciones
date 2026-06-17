@@ -35,7 +35,7 @@ public class RealTimeGraphDAO {
         this.operadorController = new OperadorController();
         this.fluidoController = new FluidoController();
         this.configuracionDAO = new ConfiguracionDAO();
-        this.portalRepository = new PortalRepository();
+        this.portalRepository = PortalRepository.getInstancia();
     }
 
     // --- Métodos de acceso a datos (delegan a los controladores) ---
@@ -47,7 +47,7 @@ public class RealTimeGraphDAO {
 
         if ("TXT".equalsIgnoreCase(config.getOrigenDatos())) {
 
-            PortalRepository repository = new PortalRepository();
+            PortalRepository repository = PortalRepository.getInstancia();
 
             repository.recargar(config.getRutaArchivo());
 
@@ -64,7 +64,7 @@ public class RealTimeGraphDAO {
 
         if ("TXT".equalsIgnoreCase(config.getOrigenDatos())) {
 
-            PortalRepository repository = new PortalRepository();
+            PortalRepository repository = PortalRepository.getInstancia();
 
             repository.recargar(config.getRutaArchivo());
 

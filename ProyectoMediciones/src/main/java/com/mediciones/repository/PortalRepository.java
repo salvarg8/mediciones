@@ -12,6 +12,8 @@ import java.util.*;
 
 public class PortalRepository {
 
+    private static PortalRepository instancia;
+
     private List<Cliente> clientes;
     private List<Valvula> valvulas;
     private Map<Integer, Cliente> clientesPorId;
@@ -21,7 +23,14 @@ public class PortalRepository {
     private static final Logger logger = LoggerFactory.getLogger(PortalRepository.class);
 
 
-    public PortalRepository() {
+    public static PortalRepository getInstancia() {
+        if (instancia == null) {
+            instancia = new PortalRepository();
+        }
+        return instancia;
+    }
+
+    private PortalRepository() {
         this.clientes = new ArrayList<>();
         this.valvulas = new ArrayList<>();
         this.clientesPorId = new HashMap<>();
@@ -202,98 +211,72 @@ public class PortalRepository {
             String tag = safeSubstring(linea, 286, 306);
             valvula.setTag(tag);
 
-            // 2. EXTRAER EL BLOQUE DE DETALLE (CH(150) - Posición exacta de 9 a 159)
-            String detalle = safeSubstring(linea, 9, 159);
+            // 2. EXTRAER EL BLOQUE DE DETALLE
+            String detalleRaw = safeSubstring(linea, 9, 159).trim();
+            String detalle = detalleRaw;
 
-            // 3. AISLAR LOS PARÉNTESIS DEL NÚMERO DE SERIE O MATERIAL
-            String contenidoParentesis = "";
-            String antesParentesis = detalle;
-            String despuesParentesis = "";
-
-            int idxOpen = detalle.indexOf('(');
-            int idxClose = detalle.indexOf(')', idxOpen + 1);
-
-            if (idxOpen >= 0 && idxClose > idxOpen) {
-                contenidoParentesis = detalle.substring(idxOpen + 1, idxClose).trim();
-                antesParentesis = detalle.substring(0, idxOpen).trim();
-                despuesParentesis = detalle.substring(idxClose + 1).trim();
-            }
-
-            // 4. ASIGNAR NÚMERO DE SERIE O MATERIAL DEL CUERPO (Si viene dentro del paréntesis)
-            if (!contenidoParentesis.isEmpty()) {
-                String limpio = contenidoParentesis.toLowerCase();
-                if (limpio.contains("oxidable") || limpio.contains("vidrio") || limpio.contains("teflón") || limpio.contains("asiento")) {
-                    valvula.setMaterialCuerpo(contenidoParentesis);
-                    valvula.setNumeroSerie("");
-                } else {
-                    valvula.setNumeroSerie(contenidoParentesis);
-                    valvula.setMaterialCuerpo("");
-                }
-            } else {
-                valvula.setNumeroSerie("");
-                valvula.setMaterialCuerpo("");
-            }
-
-            // 5. PARSEAR SERVICIO/FLUIDO Y MARCA (Bloque antes del paréntesis)
-            if (antesParentesis.endsWith("-")) {
-                antesParentesis = antesParentesis.substring(0, antesParentesis.length() - 1).trim();
-            }
-
-            int ultimoGuion = antesParentesis.lastIndexOf(" - ");
-            String servicioTexto = "";
-            String marca = "";
-
-            if (ultimoGuion >= 0) {
-                servicioTexto = antesParentesis.substring(0, ultimoGuion).trim();
-                marca = antesParentesis.substring(ultimoGuion + 3).trim();
-            } else {
-                ultimoGuion = antesParentesis.lastIndexOf("-");
-                if (ultimoGuion >= 0) {
-                    servicioTexto = antesParentesis.substring(0, ultimoGuion).trim();
-                    marca = antesParentesis.substring(ultimoGuion + 1).trim();
-                } else {
-                    servicioTexto = antesParentesis;
-                    marca = "S/M";
-                }
-            }
-
-            Fluido fluido = new Fluido();
-            fluido.setNombre(servicioTexto);
-            valvula.setFluido(fluido);
-            valvula.setMarca(marca);
-
-            // 6. LIMPIEZA Y BÚSQUEDA DE MATERIALES "FLOTANTES" (Bloque después del paréntesis)
-            despuesParentesis = despuesParentesis.trim();
-            while (despuesParentesis.startsWith("-")) despuesParentesis = despuesParentesis.substring(1).trim();
-            while (despuesParentesis.endsWith("-"))
-                despuesParentesis = despuesParentesis.substring(0, despuesParentesis.length() - 1).trim();
-
-            // Dividimos lo que quedó usando los guiones como separador para no confundir medidas con materiales
-            String[] fragmentos = despuesParentesis.split("-");
+            // Variables con valores por defecto ("Salvavidas")
+            String marca = "S/D";
+            String material = "";
+            String serie = "";
+            String servicio = "Válvula";
             String conexionesSobrantes = "";
 
-            for (String fragmento : fragmentos) {
-                String fragLimpio = fragmento.trim().toLowerCase();
-
-                // Si el fragmento habla de un material, lo "pescamos"
-                if (fragLimpio.contains("oxidable") || fragLimpio.contains("vidrio") ||
-                        fragLimpio.contains("teflón") || fragLimpio.contains("asiento")) {
-
-                    valvula.setMaterialCuerpo(fragmento.trim());
-
-                } else {
-                    // Si no es un material, son puras medidas. Las volvemos a unir.
-                    if (!conexionesSobrantes.isEmpty()) {
-                        conexionesSobrantes += " - ";
-                    }
-                    conexionesSobrantes += fragmento.trim();
-                }
+            // 3. EXTRAER SERIE/MODELO (Lo que está entre paréntesis)
+            java.util.regex.Matcher mSerie = java.util.regex.Pattern.compile("\\((.*?)\\)").matcher(detalle);
+            if (mSerie.find()) {
+                serie = mSerie.group(1).trim();
+                // Quitamos el paréntesis del texto y limpiamos guiones dobles sobrantes
+                detalle = detalle.replace(mSerie.group(0), "").replace("--", "-").replace(" - - ", " - ").trim();
             }
 
-            // Lo que sobrevivió al filtro de arriba son exclusivamente las conexiones
-            despuesParentesis = conexionesSobrantes.trim();
+            // 4. EXTRAER MATERIAL (Si menciona inox, bronce, etc. en cualquier lado)
+            java.util.regex.Matcher mMat = java.util.regex.Pattern.compile("(?i)(acero\\s*inox\\w*|acero\\s*carbono|hierro|bronce|lat[oó]n|tefl[oó]n|wcb|cf8m|ss316|asiento)").matcher(detalle);
+            if (mMat.find()) {
+                material = mMat.group(1).trim();
+                detalle = detalle.replace(mMat.group(0), "").replace("--", "-").trim();
+            }
+
+            // 5. SEPARAR SERVICIO, MARCA Y CONEXIONES (Usando los guiones restantes)
+            String[] fragmentos = detalle.split("-");
+
+            if (fragmentos.length >= 2) {
+                // El primer bloque es el servicio (ej: "Válvula de Seguridad")
+                servicio = fragmentos[0].trim();
+
+                // El segundo bloque es la marca (ej: "Hansen")
+                marca = fragmentos[1].trim();
+
+                // Todo lo demás son las conexiones (ej: 1" y 1 1/4")
+                for (int i = 2; i < fragmentos.length; i++) {
+                    if (!fragmentos[i].trim().isEmpty()) {
+                        conexionesSobrantes += fragmentos[i].trim() + " - ";
+                    }
+                }
+                // Quitamos el último guion sobrante de las conexiones
+                if (conexionesSobrantes.endsWith(" - ")) {
+                    conexionesSobrantes = conexionesSobrantes.substring(0, conexionesSobrantes.length() - 3);
+                }
+            } else {
+                // SALVAVIDAS: Si el texto no tiene el formato esperado, guardamos todo en "Marca"
+                marca = detalleRaw;
+                conexionesSobrantes = detalle;
+            }
+
+            // Asignar al objeto Válvula
+            valvula.setMarca(marca);
+            valvula.setMaterialCuerpo(material);
+            valvula.setNumeroSerie(serie);
+
+            Fluido fluido = new Fluido();
+            fluido.setNombre(servicio);
+            valvula.setFluido(fluido);
+
+            // 6. PREPARAR CONEXIONES PARA EL PARSEO FINAL
+            String despuesParentesis = conexionesSobrantes.trim();
 
             // 7. PARSEAR CONEXIONES DE ENTRADA Y SALIDA
+            // (A partir de aquí, tu código original que divide entrada y salida funciona perfecto)
             String entradaRaw = "";
             String salidaRaw = "";
             int divisorConexiones = despuesParentesis.indexOf("-");
@@ -380,4 +363,9 @@ public class PortalRepository {
         }
         return texto.substring(inicio, fin).trim();
     }
+
+    public Valvula getValvulaPorId(int valvulaId) {
+            return valvulasPorId.get(valvulaId);
+    }
+
 }

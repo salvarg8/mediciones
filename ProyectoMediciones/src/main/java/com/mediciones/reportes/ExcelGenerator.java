@@ -1,5 +1,7 @@
 package com.mediciones.reportes;
 
+import com.mediciones.dao.ConfiguracionDAO;
+import com.mediciones.repository.PortalRepository;
 import com.mediciones.view.FrmOperadorCRUD;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -37,10 +39,17 @@ public class ExcelGenerator {
     private String nombreFluidoCSV = "";
     private Double presionAperturaSolicitada;
 
+    private ConfiguracionDAO configuracionDAO;
+    private ValvulaDAO valvulaDAO;
+    private PortalRepository portalRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(ExcelGenerator.class);
 
 
     public ExcelGenerator() {
+        configuracionDAO = new ConfiguracionDAO();
+        valvulaDAO = new ValvulaDAO();
+        portalRepository = PortalRepository.getInstancia();
     }
 
     public void generarExcel(String archivoCSV, String archivoExcel) throws IOException {
@@ -146,8 +155,13 @@ public class ExcelGenerator {
     }
 
     private void escribirDatosValvula(int valvulaId) {
-        ValvulaDAO valvulaDAO = new ValvulaDAO();
-        Valvula valvula = valvulaDAO.obtenerPorId(valvulaId);
+        Valvula valvula;
+        if (configuracionDAO.obtenerConfiguracion().getOrigenDatos().equals("TXT")) {
+            valvula = portalRepository.getValvulaPorId(valvulaId);
+        } else {
+            valvula = valvulaDAO.obtenerPorId(valvulaId);
+        }
+
 
         if (valvula != null) {
             String nombreCliente = (valvula.getCliente() != null) ? valvula.getCliente().getNombre() : "Desconocido";
