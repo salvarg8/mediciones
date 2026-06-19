@@ -1,7 +1,9 @@
 package com.mediciones.view;
 
-import com.mediciones.gestor.OperadorGestor;
-import com.mediciones.model.Operador;
+import com.mediciones.gestor.ClienteGestor;
+import com.mediciones.gestor.PlantaGestor;
+import com.mediciones.model.Planta;
+import com.mediciones.model.Cliente;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,59 +17,62 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Formulario para la gestión de Operadores (CRUD).
- * Extiende JDialog para ser usado como ventana modal, compatible con la llamada de FrmInicio.
+ * Formulario para la gestión de Plantas (CRUD).
+ * Extiende JFrame manteniendo el escalado proporcional y diseño idéntico a FrmOperadorCRUD.
  */
-public class FrmOperadorCRUD extends JFrame {
+public class FrmPlantaCRUD extends JFrame {
 
     private JLabel lblNombre;
-    private JLabel lblIdentificacion;
+    private JLabel lblCliente;
     private TitledBorder formBorder;
     private TitledBorder tableBorder;
 
     // Componentes de la UI para el formulario de entrada
     private JTextField txtNombre;
-    private JTextField txtIdentificacion;
+    private JComboBox<Cliente> cmbCliente;
     private Button3D btnGuardar;
     private Button3D btnCancelar;
 
     // Componentes para la tabla de visualización
-    private JTable tblOperadores;
+    private JTable tblPlantas;
     private DefaultTableModel tableModel;
     private Button3D btnActualizar;
     private Button3D btnEditar;
     private Button3D btnEliminar;
 
-    private final OperadorGestor controller;
-    private Operador operadorSeleccionado;
+    private final PlantaGestor gestor;
+    private final ClienteGestor clienteGestor; // Agregado para separar responsabilidades
+    private Planta plantaSeleccionada;
 
     // Variables para manejo de escalado proporcional
     private int originalWidth = 600;
     private int originalHeight = 500;
-    private JPanel contentPanel; // Panel contenedor para aplicar escalado
+    private JPanel contentPanel;
 
-    private static final Logger logger = LoggerFactory.getLogger(FrmOperadorCRUD.class);
+    private static final Logger logger = LoggerFactory.getLogger(FrmPlantaCRUD.class);
 
     /**
-     * Constructor del formulario CRUD de Operadores.
+     * Constructor del formulario CRUD de Plantas.
      */
-    public FrmOperadorCRUD() {
-        super("Gestión de Operadores");
+    public FrmPlantaCRUD() {
+        super("Gestión de Plantas");
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+        setExtendedState(JFrame.MAXIMIZED_BOTH); // Estado inicial maximizado
 
-        this.controller = new OperadorGestor();
-        setResizable(true); // Permitir redimensionamiento
+        this.gestor = new PlantaGestor();
+        this.clienteGestor = new ClienteGestor(); // Inicialización
+        setResizable(true);
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        setMinimumSize(new Dimension(600, 500)); // Tamaño mínimo inicial
+        setMinimumSize(new Dimension(600, 500));
 
         initComponents();
-        cargarOperadores();
+        cargarClientes(); // Carga el ComboBox de clientes externos
+        cargarPlantas();  // Carga la JTable de plantas registradas
 
         // Establecer tamaño inicial
         setSize(originalWidth, originalHeight);
@@ -75,8 +80,8 @@ public class FrmOperadorCRUD extends JFrame {
 
         // Configurar tamaño máximo para permitir maximización
         GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        Rectangle bounds = env.getMaximumWindowBounds(); // Obtiene el tamaño máximo de la pantalla
-        setMaximumSize(bounds.getSize()); // Permite que el formulario ocupe toda la pantalla
+        Rectangle bounds = env.getMaximumWindowBounds();
+        setMaximumSize(bounds.getSize());
 
         // Listener para manejar el escalado proporcional
         addComponentListener(new ComponentAdapter() {
@@ -88,7 +93,6 @@ public class FrmOperadorCRUD extends JFrame {
     }
 
     private void resizeProportionally() {
-        int currentWidth = getWidth();
         int currentHeight = getHeight();
 
         // Calcular factor de escala basado en altura (vertical)
@@ -103,38 +107,34 @@ public class FrmOperadorCRUD extends JFrame {
     }
 
     private void adjustLayout(double scaleFactor) {
-        // Ajustar insets y gaps proporcionalmente
-        int scaledInset = (int) (8 * scaleFactor); // Base inset
-        int scaledGap = (int) (5 * scaleFactor);   // Base gap
-
         // Fuente escalada
         Font scaledFont = new Font("Segoe UI", Font.BOLD, (int)(14 * scaleFactor));
 
-        // Ajustar fuente de las etiquetas
+        // Ajustar fuente de las etiquetas y componentes
         lblNombre.setFont(scaledFont);
-        lblIdentificacion.setFont(scaledFont);
+        lblCliente.setFont(scaledFont);
         txtNombre.setFont(scaledFont);
-        txtIdentificacion.setFont(scaledFont);
+        cmbCliente.setFont(scaledFont);
         btnGuardar.setFont(scaledFont);
         btnCancelar.setFont(scaledFont);
         btnEditar.setFont(scaledFont);
         btnEliminar.setFont(scaledFont);
         btnActualizar.setFont(scaledFont);
-        tblOperadores.setFont(scaledFont);
-        tblOperadores.setRowHeight((int)(25 * scaleFactor));
+        tblPlantas.setFont(scaledFont);
+        tblPlantas.setRowHeight((int)(25 * scaleFactor));
 
         // Ajustar fuente de los títulos de los bordes
         formBorder.setTitleFont(scaledFont);
-        ((JPanel) contentPanel.getComponent(0)).setBorder(formBorder); // Reasignar el borde
+        ((JPanel) contentPanel.getComponent(0)).setBorder(formBorder);
 
         JScrollPane scrollPane = (JScrollPane) contentPanel.getComponent(1);
         tableBorder.setTitleFont(scaledFont);
-        scrollPane.setBorder(tableBorder); // Reasignar el borde
+        scrollPane.setBorder(tableBorder);
 
         // Ajustar tabla
-        if (tblOperadores.getColumnModel().getColumnCount() > 0) {
-            for (int i = 0; i < tblOperadores.getColumnModel().getColumnCount(); i++) {
-                tblOperadores.getColumnModel().getColumn(i).setPreferredWidth((int)(100 * scaleFactor));
+        if (tblPlantas.getColumnModel().getColumnCount() > 0) {
+            for (int i = 0; i < tblPlantas.getColumnModel().getColumnCount(); i++) {
+                tblPlantas.getColumnModel().getColumn(i).setPreferredWidth((int)(100 * scaleFactor));
             }
         }
 
@@ -147,7 +147,7 @@ public class FrmOperadorCRUD extends JFrame {
         setLayout(new BorderLayout(0, 0));
 
         // Panel contenedor principal para controlar escalado
-        contentPanel = new JPanel(new GridBagLayout()); // Cambiar a GridBagLayout
+        contentPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbcContent = new GridBagConstraints();
         gbcContent.insets = new Insets(10, 10, 10, 10);
         gbcContent.fill = GridBagConstraints.BOTH;
@@ -160,17 +160,17 @@ public class FrmOperadorCRUD extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Fuente base para los títulos y etiquetas
-        Font baseFont = new Font("Segoe UI", Font.BOLD, 14); // Fuente inicial
+        Font baseFont = new Font("Segoe UI", Font.BOLD, 14);
 
         // Título del formulario
-        formBorder = BorderFactory.createTitledBorder("Nuevo/Editar Operador");
+        formBorder = BorderFactory.createTitledBorder("Nueva/Editar Planta");
         formBorder.setTitleFont(baseFont);
         formPanel.setBorder(formBorder);
 
-        // Etiqueta y campo Nombre (sin ":")
+        // Etiqueta y campo Nombre
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.insets = new Insets(6, 10, 6, 4);
-        lblNombre = new JLabel("Nombre:"); // Guardar referencia
+        lblNombre = new JLabel("Nombre:");
         lblNombre.setFont(baseFont);
         formPanel.add(lblNombre, gbc);
         txtNombre = new JTextField(20);
@@ -179,19 +179,22 @@ public class FrmOperadorCRUD extends JFrame {
         gbc.weightx = 1.0;
         formPanel.add(txtNombre, gbc);
 
-        // Etiqueta y campo Identificación (sin ":")
+        // Etiqueta y combobox Cliente (relación de la entidad)
         gbc.gridx = 0; gbc.gridy = 1;
-        lblIdentificacion = new JLabel("   DNI:"); // Guardar referencia
-        lblIdentificacion.setFont(baseFont);
-        formPanel.add(lblIdentificacion, gbc);
-        txtIdentificacion = new JTextField(20);
+        gbc.insets = new Insets(6, 10, 6, 4);
+        gbc.weightx = 0.0;
+        lblCliente = new JLabel("Cliente:");
+        lblCliente.setFont(baseFont);
+        formPanel.add(lblCliente, gbc);
+        cmbCliente = new JComboBox<>();
         gbc.gridx = 1; gbc.gridy = 1;
+        gbc.insets = new Insets(6, 4, 6, 10);
         gbc.weightx = 1.0;
-        formPanel.add(txtIdentificacion, gbc);
+        formPanel.add(cmbCliente, gbc);
 
         // Panel de Botones del Formulario
-        JPanel formButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5)); // Alineación centrada
-        btnGuardar = new Button3D("Guardar nuevo", new Color(200, 255, 200)); // verde claro
+        JPanel formButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        btnGuardar = new Button3D("Guardar nueva", new Color(200, 255, 200)); // verde claro
         btnCancelar = new Button3D("Salir", new Color(255, 200, 200)); // rosa claro
 
         formButtonPanel.add(btnGuardar);
@@ -206,11 +209,11 @@ public class FrmOperadorCRUD extends JFrame {
         gbcContent.gridx = 0;
         gbcContent.gridy = 0;
         gbcContent.weightx = 1.0;
-        gbcContent.weighty = 0.0; // No expandir verticalmente
+        gbcContent.weighty = 0.0;
         contentPanel.add(formPanel, gbcContent);
 
         // --- 2. Panel de Visualización (Centro) ---
-        String[] columnNames = {"ID", "Nombre", "Identificacion"};
+        String[] columnNames = {"ID", "Nombre Planta", "Cliente Asociado"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -221,11 +224,11 @@ public class FrmOperadorCRUD extends JFrame {
                 return columnIndex == 0 ? Integer.class : String.class;
             }
         };
-        tblOperadores = new JTable(tableModel);
-        tblOperadores.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tblPlantas = new JTable(tableModel);
+        tblPlantas.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        JScrollPane scrollPane = new JScrollPane(tblOperadores);
-        tableBorder = BorderFactory.createTitledBorder("Operadores Registrados");
+        JScrollPane scrollPane = new JScrollPane(tblPlantas);
+        tableBorder = BorderFactory.createTitledBorder("Plantas Registradas");
         tableBorder.setTitleFont(baseFont);
         scrollPane.setBorder(tableBorder);
 
@@ -237,8 +240,8 @@ public class FrmOperadorCRUD extends JFrame {
         contentPanel.add(scrollPane, gbcContent);
 
         // --- 3. Panel de Control de la Tabla (Sur) ---
-        btnEditar = new Button3D("Editar Seleccionado", new Color(255, 255, 200)); // amarillo claro
-        btnEliminar = new Button3D("Eliminar Seleccionado", new Color(255, 200, 200)); // rosa claro
+        btnEditar = new Button3D("Editar Seleccionada", new Color(255, 255, 200)); // amarillo claro
+        btnEliminar = new Button3D("Eliminar Seleccionada", new Color(255, 200, 200)); // rosa claro
         btnActualizar = new Button3D("Actualizar Lista", new Color(200, 255, 200)); // verde claro
 
         JPanel controlPanel = new JPanel(new GridBagLayout());
@@ -263,18 +266,18 @@ public class FrmOperadorCRUD extends JFrame {
         gbcContent.gridx = 0;
         gbcContent.gridy = 2;
         gbcContent.weightx = 1.0;
-        gbcContent.weighty = 0.0; // No expandir demasiado verticalmente
+        gbcContent.weighty = 0.0;
         contentPanel.add(controlPanel, gbcContent);
 
         // --- Listeners ---
         btnGuardar.addActionListener(this::btnGuardarActionPerformed);
         btnCancelar.addActionListener(e -> limpiarFormularioYCerrar());
-        btnActualizar.addActionListener(e -> cargarOperadores());
+        btnActualizar.addActionListener(e -> cargarPlantas());
 
         btnEditar.addActionListener(this::btnEditarActionPerformed);
         btnEliminar.addActionListener(this::btnEliminarActionPerformed);
 
-        tblOperadores.addMouseListener(new MouseAdapter() {
+        tblPlantas.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
@@ -290,10 +293,12 @@ public class FrmOperadorCRUD extends JFrame {
 
     private void limpiarFormulario() {
         txtNombre.setText("");
-        txtIdentificacion.setText("");
-        btnGuardar.setText("Guardar");
-        operadorSeleccionado = null;
-        tblOperadores.clearSelection();
+        if (cmbCliente.getItemCount() > 0) {
+            cmbCliente.setSelectedIndex(0);
+        }
+        btnGuardar.setText("Guardar nueva");
+        plantaSeleccionada = null;
+        tblPlantas.clearSelection();
     }
 
     private void limpiarFormularioYCerrar() {
@@ -301,27 +306,45 @@ public class FrmOperadorCRUD extends JFrame {
         dispose();
     }
 
-    private void cargarOperadores() {
+    /**
+     * Llena el ComboBox con los clientes activos usando el ClienteGestor.
+     */
+    private void cargarClientes() {
+        try {
+            cmbCliente.removeAllItems();
+            List<Cliente> clientes = clienteGestor.obtenerTodosClientes();
+            for (Cliente cliente : clientes) {
+                cmbCliente.addItem(cliente);
+            }
+        } catch (Exception ex) {
+            logger.error("Error al cargar los clientes en el combobox", ex);
+        }
+    }
+
+    /**
+     * Carga TODAS las plantas activas en la tabla general.
+     */
+    private void cargarPlantas() {
         try {
             tableModel.setRowCount(0);
-            List<Operador> operadores = controller.obtenerTodosOperadores();
 
-            for (Operador operador : operadores) {
+            List<Planta> plantas = gestor.obtenerTodasPlantas();
+
+            for (Planta planta : plantas) {
                 Object[] rowData = new Object[] {
-                        operador.getId(),
-                        operador.getNombre(),
-                        operador.getIdentificacion()
+                        planta.getId(),
+                        planta.getNombre(),
+                        planta.getCliente() != null ? planta.getCliente().getNombre() : "Sin Cliente"
                 };
                 tableModel.addRow(rowData);
             }
-            limpiarFormulario();
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                    "Error al cargar los operadores " +
-                            "\nAsegúrese de que OperadorController y la BD estén funcionales.",
+                    "Error al cargar las plantas.",
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE);
-            logger.error("Error al cargar los operadores", ex);
+            logger.error("Error al cargar las plantas", ex);
         }
     }
 
@@ -331,39 +354,44 @@ public class FrmOperadorCRUD extends JFrame {
 
     private void btnGuardarActionPerformed(ActionEvent e) {
         String nombre = txtNombre.getText().trim();
-        String identificacion = txtIdentificacion.getText().trim();
+        Cliente clienteSeleccionado = (Cliente) cmbCliente.getSelectedItem();
 
         if (nombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El campo Nombre es obligatorio.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "El campo Nombre de la Planta es obligatorio.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        Operador operadorAGuardar;
+        if (clienteSeleccionado == null) {
+            JOptionPane.showMessageDialog(this, "Debe asociar la planta a un Cliente.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Planta plantaAGuardar;
         String mensajeExito;
 
-        if (operadorSeleccionado == null) {
-            operadorAGuardar = new Operador(nombre, identificacion);
-            mensajeExito = "Operador guardado exitosamente.";
+        if (plantaSeleccionada == null) {
+            plantaAGuardar = new Planta(null, nombre, new ArrayList<>(), clienteSeleccionado);
+            mensajeExito = "Planta guardada exitosamente.";
         } else {
-            operadorAGuardar = operadorSeleccionado;
-            operadorAGuardar.setNombre(nombre);
-            operadorAGuardar.setIdentificacion(identificacion);
-            mensajeExito = "Operador actualizado exitosamente.";
+            plantaAGuardar = plantaSeleccionada;
+            plantaAGuardar.setNombre(nombre);
+            plantaAGuardar.setCliente(clienteSeleccionado);
+            mensajeExito = "Planta actualizada exitosamente.";
         }
 
         try {
-            boolean success = controller.guardarOActualizarOperador(operadorAGuardar);
+            boolean success = gestor.guardarOActualizarPlanta(plantaAGuardar);
 
             if (success) {
                 JOptionPane.showMessageDialog(this, mensajeExito, "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                limpiarFormulario();
-                cargarOperadores();
+                limpiarFormulario(); // Limpiamos la UI luego del éxito
+                cargarPlantas();     // Refrescamos la tabla para que se vea el cambio
             } else {
-                JOptionPane.showMessageDialog(this, "Error al guardar/actualizar el operador (Controller retornó false).", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al guardar/actualizar la planta.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar ", "Error Crítico", JOptionPane.ERROR_MESSAGE);
-            logger.error("Error al guardar/actualizar el operador", ex);
+            JOptionPane.showMessageDialog(this, "Error de sistema al guardar/actualizar la planta", "Error Crítico", JOptionPane.ERROR_MESSAGE);
+            logger.error("Error al guardar/actualizar la planta", ex);
         }
     }
 
@@ -372,26 +400,36 @@ public class FrmOperadorCRUD extends JFrame {
     // --------------------------------------------------------------------
 
     private void btnEditarActionPerformed(ActionEvent e) {
-        int filaSeleccionada = tblOperadores.getSelectedRow();
+        int filaSeleccionada = tblPlantas.getSelectedRow();
 
         if (filaSeleccionada >= 0) {
             try {
-                int idOperador = (int) tblOperadores.getValueAt(filaSeleccionada, 0);
-                String nombre = (String) tblOperadores.getValueAt(filaSeleccionada, 1);
-                String identificacion = (String) tblOperadores.getValueAt(filaSeleccionada, 2);
+                int idPlanta = (int) tblPlantas.getValueAt(filaSeleccionada, 0);
 
-                operadorSeleccionado = new Operador(idOperador, nombre, identificacion);
+                plantaSeleccionada = gestor.obtenerPlantaPorId(idPlanta);
 
-                txtNombre.setText(nombre);
-                txtIdentificacion.setText(identificacion);
-                btnGuardar.setText("Guardar Cambios (ID: " + idOperador + ")");
+                if (plantaSeleccionada != null) {
+                    txtNombre.setText(plantaSeleccionada.getNombre());
+
+                    if (plantaSeleccionada.getCliente() != null) {
+                        for (int i = 0; i < cmbCliente.getItemCount(); i++) {
+                            Cliente item = cmbCliente.getItemAt(i);
+                            if (item.getId() == (plantaSeleccionada.getCliente().getId())) {
+                                cmbCliente.setSelectedIndex(i);
+                                break;
+                            }
+                        }
+                    }
+
+                    btnGuardar.setText("Guardar Cambios (ID: " + idPlanta + ")");
+                }
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición " , "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición", "Error", JOptionPane.ERROR_MESSAGE);
                 logger.error("Error al cargar los datos para edición", ex);
             }
         } else {
-            JOptionPane.showMessageDialog(this, "Por favor, seleccione un operador de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione una planta de la lista para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
         }
     }
 
@@ -400,36 +438,36 @@ public class FrmOperadorCRUD extends JFrame {
     // --------------------------------------------------------------------
 
     private void btnEliminarActionPerformed(ActionEvent e) {
-        int filaSeleccionada = tblOperadores.getSelectedRow();
+        int filaSeleccionada = tblPlantas.getSelectedRow();
 
         if (filaSeleccionada >= 0) {
             try {
-                int idOperador = (int) tblOperadores.getValueAt(filaSeleccionada, 0);
-                String nombreOperador = (String) tblOperadores.getValueAt(filaSeleccionada, 1);
+                int idPlanta = (int) tblPlantas.getValueAt(filaSeleccionada, 0);
+                String nombrePlanta = (String) tblPlantas.getValueAt(filaSeleccionada, 1);
 
                 int confirmacion = JOptionPane.showConfirmDialog(
                         this,
-                        "¿Está seguro de que desea eliminar al operador: " + nombreOperador + " (ID: " + idOperador + ")?",
+                        "¿Está seguro de que desea eliminar la planta: " + nombrePlanta + " (ID: " + idPlanta + ")?",
                         "Confirmar Eliminación",
                         JOptionPane.YES_NO_OPTION
                 );
 
                 if (confirmacion == JOptionPane.YES_OPTION) {
-                    if (controller.eliminarOperador(idOperador)) {
-                        JOptionPane.showMessageDialog(this, "Operador eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    if (gestor.eliminarPlanta(idPlanta)) {
+                        JOptionPane.showMessageDialog(this, "Planta eliminada exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                         limpiarFormulario();
-                        cargarOperadores();
+                        cargarPlantas();
                     } else {
-                        JOptionPane.showMessageDialog(this, "No se pudo eliminar el operador (Verifique si hay registros relacionados).", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "No se pudo eliminar la planta (Verifique si hay válvulas o registros relacionados).", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al obtener el ID del operador para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
-                logger.error("Error al obtener el ID del operador para eliminar", ex);
+                JOptionPane.showMessageDialog(this, "Error al obtener el ID de la planta para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
+                logger.error("Error al obtener el ID de la planta para eliminar", ex);
             }
         } else {
-            JOptionPane.showMessageDialog(this, "Por favor, seleccione un operador de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione una planta de la lista para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
         }
     }
 }

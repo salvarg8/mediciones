@@ -1,6 +1,5 @@
 package com.mediciones.dao;
 
-import com.mediciones.view.FrmOperadorCRUD;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,25 +177,38 @@ public final class DatabaseManager {
             stmt.execute("CREATE TABLE IF NOT EXISTS clientes (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(255) NOT NULL," +
-                    "nit VARCHAR(50) UNIQUE NOT NULL" +
+                    "nit VARCHAR(50) UNIQUE NOT NULL," +
+                    "active BOOLEAN DEFAULT TRUE" + // Columna para borrado lógico
                     ") ENGINE=InnoDB;");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS operador (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(255) NOT NULL," +
-                    "identificacion VARCHAR(50) UNIQUE NOT NULL" +
+                    "identificacion VARCHAR(50) UNIQUE NOT NULL," +
+                    "active BOOLEAN DEFAULT TRUE" + // Columna para borrado lógico
                     ") ENGINE=InnoDB;");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS fluidos (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "nombre VARCHAR(100) NOT NULL UNIQUE," +
                     "densidad REAL," +
-                    "viscosidad REAL" +
+                    "viscosidad REAL," +
+                    "active BOOLEAN DEFAULT TRUE" +
+                    ") ENGINE=InnoDB;");
+
+            // NUEVA TABLA: plantas (Debe ir antes de valvulas por la clave foránea)
+            stmt.execute("CREATE TABLE IF NOT EXISTS plantas (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "nombre VARCHAR(255) NOT NULL," +
+                    "cliente_id INT," +
+                    "active BOOLEAN DEFAULT TRUE," + // Columna para borrado lógico
+                    "CONSTRAINT fk_plantas_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id)" +
                     ") ENGINE=InnoDB;");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS valvulas (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "cliente_id INT," +
+                    "planta_id INT," + // Relación con la tabla plantas
                     "fluido_servicio_id INT," +
                     "tag TEXT," +
                     "numero_serie TEXT," +
@@ -209,7 +221,9 @@ public final class DatabaseManager {
                     "salida_rosca_tipo TEXT," +
                     "salida_brida_diametro TEXT," +
                     "salida_brida_serie TEXT," +
+                    "active BOOLEAN DEFAULT TRUE," + // Columna para borrado lógico
                     "CONSTRAINT fk_valvulas_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id)," +
+                    "CONSTRAINT fk_valvulas_planta FOREIGN KEY (planta_id) REFERENCES plantas(id)," +
                     "CONSTRAINT fk_valvulas_fluido FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)" +
                     ") ENGINE=InnoDB;");
 
@@ -242,6 +256,7 @@ public final class DatabaseManager {
 
     private static void updateSchema(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
+            // Actualizaciones anteriores
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN fluido_servicio_id INT");
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN entrada_rosca_tipo TEXT");
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN entrada_brida_diametro TEXT");
@@ -251,8 +266,23 @@ public final class DatabaseManager {
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN salida_brida_serie TEXT");
             executeSchemaUpdate(stmt, "ALTER TABLE calibracion_sensores ADD COLUMN a3 REAL");
             executeSchemaUpdate(stmt, "ALTER TABLE calibracion_sensores ADD COLUMN c3 REAL");
+
+            // Actualizaciones NUEVAS para soportar Plantas y Borrado Lógico
+            executeSchemaUpdate(stmt, "ALTER TABLE clientes ADD COLUMN active BOOLEAN DEFAULT TRUE");
+            executeSchemaUpdate(stmt, "ALTER TABLE operador ADD COLUMN active BOOLEAN DEFAULT TRUE");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN active BOOLEAN DEFAULT TRUE");
+
+
+            // Relación de válvula con planta (por si la tabla válvulas ya existía)
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN planta_id INT");
+
+            executeSchemaUpdate(stmt, "ALTER TABLE fluidos ADD COLUMN active BOOLEAN DEFAULT TRUE");
+
+            // Claves foráneas faltantes
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_fluido " +
                     "FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_planta " +
+                    "FOREIGN KEY (planta_id) REFERENCES plantas(id)");
         }
     }
 

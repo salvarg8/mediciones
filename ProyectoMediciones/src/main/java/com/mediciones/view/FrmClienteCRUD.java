@@ -1,6 +1,6 @@
 package com.mediciones.view;
 
-import com.mediciones.controller.ClienteController;
+import com.mediciones.gestor.ClienteGestor;
 import com.mediciones.model.Cliente;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class FrmClienteCRUD extends JFrame {
     private Button3D btnEditar;
     private Button3D btnEliminar;
 
-    private final ClienteController controller;
+    private final ClienteGestor controller;
     private Cliente clienteSeleccionado;
 
     // Variables para manejo de escalado proporcional
@@ -59,7 +59,7 @@ public class FrmClienteCRUD extends JFrame {
 
         setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
 
-        this.controller = new ClienteController();
+        this.controller = new ClienteGestor();
         setResizable(true); // Permitir redimensionamiento
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

@@ -1,4 +1,4 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.model.Fluido;
 import com.mediciones.dao.FluidoDAO;
@@ -8,11 +8,11 @@ import java.util.List;
  * Controlador para la lógica de negocio relacionada con la entidad Fluido.
  * Actúa como intermediario entre la Vista y el DAO (FluidoDAO).
  */
-public class FluidoController {
+public class FluidoGestor {
 
     private final FluidoDAO fluidoDAO;
 
-    public FluidoController() {
+    public FluidoGestor() {
         this.fluidoDAO = new FluidoDAO();
     }
 

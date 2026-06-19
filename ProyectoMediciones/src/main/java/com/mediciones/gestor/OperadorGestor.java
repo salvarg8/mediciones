@@ -1,4 +1,4 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.dao.OperadorDAO; // Asegúrate de que esta clase exista
 import com.mediciones.model.Operador; // Asegúrate de que esta clase exista
@@ -8,12 +8,12 @@ import java.util.List;
 /**
  * Controlador para la gestión de Operadores.
  */
-public class OperadorController {
+public class OperadorGestor {
 
     // Se asume que OperadorDAO es una clase existente en tu paquete dao
     private final OperadorDAO operadorDAO;
 
-    public OperadorController() {
+    public OperadorGestor() {
         // Inicializa el Data Access Object (DAO)
         this.operadorDAO = new OperadorDAO();
     }

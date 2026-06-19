@@ -1,6 +1,6 @@
 package com.mediciones.view;
 
-import com.mediciones.controller.FluidoController;
+import com.mediciones.gestor.FluidoGestor;
 import com.mediciones.model.Fluido;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class FrmFluidosCRUD extends JFrame {
     private Button3D btnEditar; 
     private Button3D btnEliminar; 
 
-    private final FluidoController controller;
+    private final FluidoGestor controller;
     private Fluido fluidoSeleccionado;
 
     // Variables para manejo de escalado proporcional
@@ -58,7 +58,7 @@ public class FrmFluidosCRUD extends JFrame {
 
         setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
 
-        this.controller = new FluidoController();
+        this.controller = new FluidoGestor();
         setResizable(true); // Permitir redimensionamiento
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

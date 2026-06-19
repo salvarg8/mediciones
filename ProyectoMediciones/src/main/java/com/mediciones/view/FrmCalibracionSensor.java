@@ -1,7 +1,7 @@
 package com.mediciones.view;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.mediciones.controller.SensorCalibracionController;
+import com.mediciones.gestor.SensorCalibracionGestor;
 import com.mediciones.model.SensorCalibracion;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class FrmCalibracionSensor extends JFrame {
     private JComboBox<Integer> baudCombo;
     private JComboBox<String> sensorCombo;
 
-    private SensorCalibracionController calibracionController;
+    private SensorCalibracionGestor calibracionController;
 
     private JLabel lblAValue;
     private JLabel lblCValue;
@@ -51,7 +51,7 @@ public class FrmCalibracionSensor extends JFrame {
     private static final Logger logger = LoggerFactory.getLogger(FrmCalibracionSensor.class);
 
     public FrmCalibracionSensor() {
-        this.calibracionController = new SensorCalibracionController();
+        this.calibracionController = new SensorCalibracionGestor();
         setTitle("Calibración de Sensores");
 
         setSize(1000, 800);

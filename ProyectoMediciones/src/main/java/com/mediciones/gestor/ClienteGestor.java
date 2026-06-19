@@ -1,4 +1,4 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.model.Cliente;
 import com.mediciones.dao.ClienteDAO;
@@ -8,11 +8,11 @@ import java.util.List;
  * Controlador para la lógica de negocio relacionada con la entidad Cliente.
  * Actúa como intermediario entre la Vista (FrmClienteCRUD) y el DAO (ClienteDAO).
  */
-public class ClienteController {
+public class ClienteGestor {
 
     private final ClienteDAO clienteDAO;
 
-    public ClienteController() {
+    public ClienteGestor() {
         this.clienteDAO = new ClienteDAO();
     }
 

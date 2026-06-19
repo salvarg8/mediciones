@@ -1,15 +1,9 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.dao.RealTimeGraphDAO;
-import com.mediciones.model.Cliente;
-import com.mediciones.model.Fluido;
-import com.mediciones.model.Operador;
-import com.mediciones.model.SensorCalibracion;
-import com.mediciones.model.Ubicacion;
-import com.mediciones.model.Valvula;
+import com.mediciones.model.*;
 import com.mediciones.reportes.ExcelGenerator;
-import com.mediciones.repository.ArchivoNoEncontradoException;
 import com.mediciones.view.RealTimeGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +20,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-public class RealTimeGraphController {
+public class RealTimeGraphGestor {
     private final RealTimeGraph view;
     private final RealTimeGraphDAO dao;
-    private final UbicacionController ubicacionController;
+    private final UbicacionGestor ubicacionGestor;
 
     private SerialPort comPort;
     private volatile boolean running = false;
@@ -48,12 +42,12 @@ public class RealTimeGraphController {
     private String selectedSensorType = "Motorola";
     private double pressureRequested = 0.0;
 
-    private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphController.class);
+    private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphGestor.class);
 
-    public RealTimeGraphController(RealTimeGraph view) {
+    public RealTimeGraphGestor(RealTimeGraph view) {
         this.view = view;
         this.dao = new RealTimeGraphDAO();
-        this.ubicacionController = new UbicacionController();
+        this.ubicacionGestor = new UbicacionGestor();
     }
 
     public void init() {
@@ -99,7 +93,7 @@ public class RealTimeGraphController {
 
     public void loadCalibrationValues() {
         try {
-            SensorCalibracion ucPresion = new SensorCalibracionController().obtenerUltimaCalibracionPorSensor(selectedSensorType);
+            SensorCalibracion ucPresion = new SensorCalibracionGestor().obtenerUltimaCalibracionPorSensor(selectedSensorType);
             if (ucPresion != null) {
                 factorA = (ucPresion.getA1() != null && selectedSensorType.equals("Motorola")) ? ucPresion.getA1() :
                         (ucPresion.getA2() != null && selectedSensorType.equals("Endress-Hauser")) ? ucPresion.getA2() : 1.0;
@@ -110,7 +104,7 @@ public class RealTimeGraphController {
                 constanteC = 0.0;
             }
 
-            SensorCalibracion ucTemp = new SensorCalibracionController().obtenerUltimaCalibracionPorSensor("LM35");
+            SensorCalibracion ucTemp = new SensorCalibracionGestor().obtenerUltimaCalibracionPorSensor("LM35");
             if (ucTemp != null) {
                 factorATemp = ucTemp.getA3() != null ? ucTemp.getA3() : 1.0;
                 constanteCTemp = ucTemp.getC3() != null ? ucTemp.getC3() : 0.0;
@@ -180,7 +174,7 @@ public class RealTimeGraphController {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
             String fileName = cliente.getNombre().replace(" ", "-") + "-"
                     + valvula.getTag().replace(" ", "-") + "-" + timestamp + ".csv";
-            Ubicacion u = ubicacionController.obtenerUbicacion();
+            Ubicacion u = ubicacionGestor.obtenerUbicacion();
             nombreUltimoArchivoCSV = (u != null && u.getUbicacion() != null)
                     ? new File(new File(u.getUbicacion()), fileName).getAbsolutePath()
                     : fileName;
@@ -364,7 +358,7 @@ public class RealTimeGraphController {
         }
 
         try {
-            Ubicacion ubicacion = ubicacionController.obtenerUbicacion();
+            Ubicacion ubicacion = ubicacionGestor.obtenerUbicacion();
             String direccion;
             if (ubicacion != null && ubicacion.getUbicacion() != null) {
                 direccion = ubicacion.getUbicacion();
@@ -455,7 +449,7 @@ public class RealTimeGraphController {
             String fileName = cliente.getNombre().replace(" ", "-") + "-"
                     + valvula.getTag().replace(" ", "-") + "-SIMULADO-" + timestamp + ".csv";
 
-            Ubicacion u = ubicacionController.obtenerUbicacion();
+            Ubicacion u = ubicacionGestor.obtenerUbicacion();
             nombreUltimoArchivoCSV = (u != null && u.getUbicacion() != null)
                     ? new File(new File(u.getUbicacion()), fileName).getAbsolutePath()
                     : fileName;
@@ -511,5 +505,52 @@ public class RealTimeGraphController {
             view.showErrorMessage("Error al iniciar simulación: " + ex.getMessage());
             stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
         }
+    }
+
+    public void updateValvulasPorPlanta(JComboBox<Valvula> cmbValvula, Planta selected) {
+        if (cmbValvula == null) {
+            return;
+        }
+
+        // 1. Limpiamos las válvulas anteriores
+        cmbValvula.removeAllItems();
+
+        // 2. Verificamos que la planta sea válida y tenga válvulas
+        if (selected != null && selected.getValvulas() != null) {
+
+            // Creamos una copia de la lista para no modificar la original al ordenar
+            List<Valvula> valvulasDePlanta = new ArrayList<>(selected.getValvulas());
+
+            // 3. Ordenamos las válvulas por su Tag de forma alfabética (ideal para UI)
+            valvulasDePlanta.sort((v1, v2) -> {
+                String tag1 = v1.getTag() == null ? "" : v1.getTag();
+                String tag2 = v2.getTag() == null ? "" : v2.getTag();
+                return tag1.compareToIgnoreCase(tag2);
+            });
+
+            // 4. Cargamos las válvulas ordenadas en el JComboBox
+            for (Valvula valvula : valvulasDePlanta) {
+                cmbValvula.addItem(valvula);
+            }
+        }
+    }
+
+    public void updatePlantas(JComboBox<Planta> cmbPlanta, Cliente selected) {
+        if (cmbPlanta == null) {
+            return;
+        }
+        cmbPlanta.removeAllItems();
+
+        List<Planta> plantasDeCliente = new ArrayList<>(selected.getPlantas());
+
+        plantasDeCliente.sort((p1, p2) -> {
+            String nombre1 = p1.getNombre() == null ? "" : p1.getNombre();
+            String nombre2 = p2.getNombre() == null ? "" : p2.getNombre();
+            return nombre1.compareToIgnoreCase(nombre2);
+        });
+
+        for (Planta planta : plantasDeCliente){ {
+            cmbPlanta.addItem(planta);
+        }}
     }
 }

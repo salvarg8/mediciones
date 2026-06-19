@@ -2,6 +2,7 @@ package com.mediciones.dao;
 
 import com.mediciones.model.Valvula;
 import com.mediciones.model.Cliente;
+import com.mediciones.model.Planta;
 import com.mediciones.model.Fluido;
 import java.sql.*;
 import java.util.ArrayList;
@@ -9,44 +10,55 @@ import java.util.List;
 
 /**
  * Objeto de Acceso a Datos (DAO) para la entidad Valvula.
- * Versión corregida para Java 19 + MySQL.
+ * Actualizado para soportar relación con Planta y Borrado Lógico.
  */
 public class ValvulaDAO {
 
-    // --- Método INSERTAR (CORREGIDO PARA MYSQL) ---
+    private static final String BASE_SELECT_SQL =
+            "SELECT v.id, v.tag, v.numero_serie, v.lugar_conexion, v.marca, " +
+                    "v.material_cuerpo, v.entrada_rosca_tipo, v.entrada_brida_diametro, v.entrada_brida_serie, " +
+                    "v.salida_rosca_tipo, v.salida_brida_diametro, v.salida_brida_serie, " +
+                    "p.id AS planta_id, p.nombre AS planta_nombre, " +
+                    "c.id AS cliente_id, c.nombre AS cliente_nombre, " +
+                    "f.id AS fluido_servicio_id, f.nombre AS fluido_servicio_nombre " +
+                    "FROM valvulas v " +
+                    "LEFT JOIN plantas p ON v.planta_id = p.id " +
+                    "LEFT JOIN clientes c ON v.cliente_id = c.id " +
+                    "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
+                    "WHERE v.active = true "; // Solo traemos registros no borrados lógicamente
 
-    /**
-     * Inserta una nueva válvula en la base de datos.
-     * @param valvula La válvula a insertar.
-     * @return true si la inserción fue exitosa.
-     */
+
     public boolean insertar(Valvula valvula) {
-        String insertSql = "INSERT INTO valvulas(cliente_id, fluido_servicio_id, tag, numero_serie, lugar_conexion, " +
-                "marca, material_cuerpo, entrada_rosca_tipo, entrada_brida_diametro, entrada_brida_serie, " +
-                "salida_rosca_tipo, salida_brida_diametro, salida_brida_serie) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO valvulas (cliente_id, planta_id, fluido_servicio_id, tag, numero_serie, " +
+                "lugar_conexion, marca, material_cuerpo, entrada_rosca_tipo, entrada_brida_diametro, " +
+                "entrada_brida_serie, salida_rosca_tipo, salida_brida_diametro, salida_brida_serie) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            // Asignar parámetros con manejo seguro de NULLs
-            setNullableInt(pstmt, 1, (valvula.getCliente() != null) ? valvula.getCliente().getId() : null);
-            setNullableInt(pstmt, 2, (valvula.getFluido() != null) ? valvula.getFluido().getId() : null);
-            pstmt.setString(3, valvula.getTag());
-            pstmt.setString(4, valvula.getNumeroSerie());
-            pstmt.setString(5, valvula.getLugarConexion());
-            pstmt.setString(6, valvula.getMarca());
-            pstmt.setString(7, valvula.getMaterialCuerpo());
-            pstmt.setString(8, valvula.getEntradaRoscaTipo());
-            pstmt.setString(9, valvula.getEntradaBridaDiametro());
-            pstmt.setString(10, valvula.getEntradaBridaSerie());
-            pstmt.setString(11, valvula.getSalidaRoscaTipo());
-            pstmt.setString(12, valvula.getSalidaBridaDiametro());
-            pstmt.setString(13, valvula.getSalidaBridaSerie());
+            // Protección de consistencia: Extraemos cliente_id directamente de la planta asignada
+            int clienteId = valvula.getPlanta().getCliente().getId();
+            pstmt.setInt(1, clienteId);
+            pstmt.setInt(2, valvula.getPlanta().getId());
+
+            setNullableInt(pstmt, 3, (valvula.getFluido() != null) ? valvula.getFluido().getId() : null);
+
+            pstmt.setString(4, valvula.getTag());
+            pstmt.setString(5, valvula.getNumeroSerie());
+            pstmt.setString(6, valvula.getLugarConexion());
+            pstmt.setString(7, valvula.getMarca());
+            pstmt.setString(8, valvula.getMaterialCuerpo());
+            pstmt.setString(9, valvula.getEntradaRoscaTipo());
+            pstmt.setString(10, valvula.getEntradaBridaDiametro());
+            pstmt.setString(11, valvula.getEntradaBridaSerie());
+            pstmt.setString(12, valvula.getSalidaRoscaTipo());
+            pstmt.setString(13, valvula.getSalidaBridaDiametro());
+            pstmt.setString(14, valvula.getSalidaBridaSerie());
 
             int affectedRows = pstmt.executeUpdate();
 
             if (affectedRows > 0) {
-                // ✅ CORRECCIÓN: Usar getGeneratedKeys() (compatible con MySQL)
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         valvula.setId(generatedKeys.getInt(1));
@@ -63,44 +75,34 @@ public class ValvulaDAO {
         }
     }
 
-    // Método auxiliar para manejar integers nulos
-    private void setNullableInt(PreparedStatement pstmt, int index, Integer value) throws SQLException {
-        if (value == null) {
-            pstmt.setNull(index, Types.INTEGER);
-        } else {
-            pstmt.setInt(index, value);
-        }
-    }
 
-    // --- Método ACTUALIZAR (CORREGIDO) ---
-
-    /**
-     * Actualiza una válvula existente en la base de datos.
-     * @param valvula La válvula a actualizar.
-     * @return true si la actualización fue exitosa.
-     */
     public boolean actualizar(Valvula valvula) {
-        String sql = "UPDATE valvulas SET cliente_id = ?, fluido_servicio_id = ?, tag = ?, numero_serie = ?, lugar_conexion = ?, " +
-                "marca = ?, material_cuerpo = ?, entrada_rosca_tipo = ?, entrada_brida_diametro = ?, entrada_brida_serie = ?, " +
-                "salida_rosca_tipo = ?, salida_brida_diametro = ?, salida_brida_serie = ? WHERE id = ?";
+        String sql = "UPDATE valvulas SET cliente_id = ?, planta_id = ?, fluido_servicio_id = ?, tag = ?, " +
+                "numero_serie = ?, lugar_conexion = ?, marca = ?, material_cuerpo = ?, entrada_rosca_tipo = ?, " +
+                "entrada_brida_diametro = ?, entrada_brida_serie = ?, salida_rosca_tipo = ?, " +
+                "salida_brida_diametro = ?, salida_brida_serie = ? WHERE id = ? AND active = true";
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Asignar parámetros con manejo seguro de NULLs
-            setNullableInt(pstmt, 1, (valvula.getCliente() != null) ? valvula.getCliente().getId() : null);
-            setNullableInt(pstmt, 2, (valvula.getFluido() != null) ? valvula.getFluido().getId() : null);
-            pstmt.setString(3, valvula.getTag());
-            pstmt.setString(4, valvula.getNumeroSerie());
-            pstmt.setString(5, valvula.getLugarConexion());
-            pstmt.setString(6, valvula.getMarca());
-            pstmt.setString(7, valvula.getMaterialCuerpo());
-            pstmt.setString(8, valvula.getEntradaRoscaTipo());
-            pstmt.setString(9, valvula.getEntradaBridaDiametro());
-            pstmt.setString(10, valvula.getEntradaBridaSerie());
-            pstmt.setString(11, valvula.getSalidaRoscaTipo());
-            pstmt.setString(12, valvula.getSalidaBridaDiametro());
-            pstmt.setString(13, valvula.getSalidaBridaSerie());
-            pstmt.setInt(14, valvula.getId());
+            // Mantenemos consistencia con la planta
+            pstmt.setInt(1, valvula.getPlanta().getCliente().getId());
+            pstmt.setInt(2, valvula.getPlanta().getId());
+
+            setNullableInt(pstmt, 3, (valvula.getFluido() != null) ? valvula.getFluido().getId() : null);
+
+            pstmt.setString(4, valvula.getTag());
+            pstmt.setString(5, valvula.getNumeroSerie());
+            pstmt.setString(6, valvula.getLugarConexion());
+            pstmt.setString(7, valvula.getMarca());
+            pstmt.setString(8, valvula.getMaterialCuerpo());
+            pstmt.setString(9, valvula.getEntradaRoscaTipo());
+            pstmt.setString(10, valvula.getEntradaBridaDiametro());
+            pstmt.setString(11, valvula.getEntradaBridaSerie());
+            pstmt.setString(12, valvula.getSalidaRoscaTipo());
+            pstmt.setString(13, valvula.getSalidaBridaDiametro());
+            pstmt.setString(14, valvula.getSalidaBridaSerie());
+            pstmt.setInt(15, valvula.getId());
 
             return pstmt.executeUpdate() > 0;
 
@@ -111,104 +113,117 @@ public class ValvulaDAO {
         }
     }
 
-    // --- Método ELIMINAR (CORREGIDO) ---
 
-    /**
-     * Elimina una válvula de la base de datos.
-     * @param id El ID de la válvula a eliminar.
-     * @return true si la eliminación fue exitosa, false en caso contrario.
-     */
     public boolean eliminar(int id) {
-        String sql = "DELETE FROM valvulas WHERE id = ?";
+        // En lugar de DELETE, cambiamos active a false
+        String sql = "UPDATE valvulas SET active = false WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
-            System.err.println("Error al eliminar válvula: " + e.getMessage());
+            System.err.println("Error al eliminar (lógico) válvula: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
 
-    // --- Método OBTENER TODAS LAS VÁLVULAS (CORREGIDO) ---
+    // --- Métodos de LECTURA ---
 
-    /**
-     * Obtiene todas las válvulas registradas en la base de datos.
-     * @return Una lista de objetos Valvula.
-     */
     public List<Valvula> obtenerTodas() {
         List<Valvula> valvulas = new ArrayList<>();
-        String sql = "SELECT v.id, c.id AS cliente_id, c.nombre AS cliente_nombre, f.id AS fluido_servicio_id, " +
-                "f.nombre AS fluido_servicio_nombre, v.tag, v.numero_serie, v.lugar_conexion, v.marca, " +
-                "v.material_cuerpo, v.entrada_rosca_tipo, v.entrada_brida_diametro, v.entrada_brida_serie, " +
-                "v.salida_rosca_tipo, v.salida_brida_diametro, v.salida_brida_serie " +
-                "FROM valvulas v " +
-                "LEFT JOIN clientes c ON v.cliente_id = c.id " +
-                "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id";
-
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             ResultSet rs = stmt.executeQuery(BASE_SELECT_SQL)) {
 
             while (rs.next()) {
                 valvulas.add(crearValvulaDesdeResultSet(rs));
             }
-
         } catch (SQLException e) {
             System.err.println("Error al obtener todas las válvulas: " + e.getMessage());
             e.printStackTrace();
         }
-
         return valvulas;
     }
 
-    // --- Método OBTENER VÁLVULA POR ID (CORREGIDO) ---
-
-    /**
-     * Obtiene una válvula específica por su ID.
-     * @param id El ID de la válvula a buscar.
-     * @return La válvula encontrada, o null si no existe.
-     */
     public Valvula obtenerPorId(int id) {
-        String sql = "SELECT v.id, c.id AS cliente_id, c.nombre AS cliente_nombre, f.id AS fluido_servicio_id, " +
-                "f.nombre AS fluido_servicio_nombre, v.tag, v.numero_serie, v.lugar_conexion, v.marca, " +
-                "v.material_cuerpo, v.entrada_rosca_tipo, v.entrada_brida_diametro, v.entrada_brida_serie, " +
-                "v.salida_rosca_tipo, v.salida_brida_diametro, v.salida_brida_serie " +
-                "FROM valvulas v " +
-                "LEFT JOIN clientes c ON v.cliente_id = c.id " +
-                "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
-                "WHERE v.id = ?";
+        String sql = BASE_SELECT_SQL + " AND v.id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
 
+            pstmt.setInt(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return crearValvulaDesdeResultSet(rs);
                 }
             }
-
         } catch (SQLException e) {
             System.err.println("Error al obtener válvula por ID: " + e.getMessage());
             e.printStackTrace();
         }
-
         return null;
     }
 
-    // --- Método PARA VERIFICAR DUPLICADOS (CORREGIDO) ---
+    public List<Valvula> obtenerPorCliente(int idCliente) {
+        List<Valvula> valvulas = new ArrayList<>();
+        String sql = BASE_SELECT_SQL + " AND v.cliente_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-    /**
-     * Verifica si ya existe una válvula con los mismos valores de cliente, TAG y lugar de conexión.
-     * @param clienteId El ID del cliente.
-     * @param tag El TAG de la válvula.
-     * @param lugarConexion El lugar de conexión.
-     * @return true si existe una duplicada, false en caso contrario.
-     */
+            pstmt.setInt(1, idCliente);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    valvulas.add(crearValvulaDesdeResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener válvulas por cliente: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return valvulas;
+    }
+
+    public List<Valvula> getByPlantaId(int idPlanta) {
+        List<Valvula> valvulas = new ArrayList<>();
+        String sql = BASE_SELECT_SQL + " AND v.planta_id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, idPlanta);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    valvulas.add(crearValvulaDesdeResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener válvulas por Planta ID: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return valvulas;
+    }
+
+    public Valvula obtenerPorTag(String tag) {
+        String sql = BASE_SELECT_SQL + " AND v.tag = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, tag);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return crearValvulaDesdeResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener válvula por TAG: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public boolean existeDuplicada(int clienteId, String tag, String lugarConexion) {
-        String sql = "SELECT COUNT(*) AS count FROM valvulas WHERE cliente_id = ? AND tag = ? AND lugar_conexion = ?";
+        String sql = "SELECT COUNT(*) AS count FROM valvulas WHERE cliente_id = ? AND tag = ? AND lugar_conexion = ? AND active = true";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, clienteId);
@@ -220,163 +235,41 @@ public class ValvulaDAO {
                     return rs.getInt("count") > 0;
                 }
             }
-
         } catch (SQLException e) {
             System.err.println("Error al verificar duplicados: " + e.getMessage());
             e.printStackTrace();
         }
-
         return false;
     }
 
-    // --- Métodos de ayuda para consultas específicas ---
+    // --- Métodos de armado y auxiliares ---
 
-    /**
-     * Obtiene todas las válvulas asociadas a un cliente específico.
-     * @param idCliente El ID del cliente.
-     * @return Una lista de objetos Valvula filtrados por cliente.
-     */
-    public List<Valvula> obtenerPorCliente(int idCliente) {
-        List<Valvula> valvulas = new ArrayList<>();
-        String sql = "SELECT v.id, c.id AS cliente_id, c.nombre AS cliente_nombre, f.id AS fluido_servicio_id, " +
-                "f.nombre AS fluido_servicio_nombre, v.tag, v.numero_serie, v.lugar_conexion, v.marca, " +
-                "v.material_cuerpo, v.entrada_rosca_tipo, v.entrada_brida_diametro, v.entrada_brida_serie, " +
-                "v.salida_rosca_tipo, v.salida_brida_diametro, v.salida_brida_serie " +
-                "FROM valvulas v " +
-                "LEFT JOIN clientes c ON v.cliente_id = c.id " +
-                "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
-                "WHERE v.cliente_id = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, idCliente);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    valvulas.add(crearValvulaDesdeResultSet(rs));
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error al obtener válvulas por cliente: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return valvulas;
-    }
-
-    /**
-     * Obtiene una válvula específica por su TAG.
-     * @param tag El TAG de la válvula a buscar.
-     * @return La válvula encontrada, o null si no existe.
-     */
-    public Valvula obtenerPorTag(String tag) {
-        String sql = "SELECT v.id, c.id AS cliente_id, c.nombre AS cliente_nombre, f.id AS fluido_servicio_id, " +
-                "f.nombre AS fluido_servicio_nombre, v.tag, v.numero_serie, v.lugar_conexion, v.marca, " +
-                "v.material_cuerpo, v.entrada_rosca_tipo, v.entrada_brida_diametro, v.entrada_brida_serie, " +
-                "v.salida_rosca_tipo, v.salida_brida_diametro, v.salida_brida_serie " +
-                "FROM valvulas v " +
-                "LEFT JOIN clientes c ON v.cliente_id = c.id " +
-                "LEFT JOIN fluidos f ON v.fluido_servicio_id = f.id " +
-                "WHERE v.tag = ?";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, tag);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return crearValvulaDesdeResultSet(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error al obtener válvula por TAG: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    // --- Métodos auxiliares para obtener datos relacionales ---
-
-    /**
-     * Obtiene todos los clientes registrados.
-     * @return Una lista de objetos Cliente.
-     */
-    public List<Cliente> obtenerTodosClientes() {
-        List<Cliente> clientes = new ArrayList<>();
-        String sql = "SELECT id, nombre FROM clientes";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                clientes.add(new Cliente(
-                        rs.getInt("id"),
-                        rs.getString("nombre"),
-                        null
-                ));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error al obtener todos los clientes: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return clientes;
-    }
-
-    /**
-     * Obtiene todos los fluidos de servicio registrados.
-     * @return Una lista de objetos Fluido.
-     */
-    public List<Fluido> obtenerTodosFluidos() {
-        List<Fluido> fluidos = new ArrayList<>();
-        String sql = "SELECT id, nombre FROM fluidos";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                fluidos.add(new Fluido(
-                        rs.getInt("id"),
-                        rs.getString("nombre")
-                ));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error al obtener todos los fluidos: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return fluidos;
-    }
-
-    // --- Método auxiliar para crear objetos Valvula desde ResultSet ---
-
-    /**
-     * Crea un objeto Valvula desde un ResultSet.
-     * @param rs El ResultSet con los datos de la válvula.
-     * @return Un objeto Valvula completo.
-     * @throws SQLException Si ocurre un error al procesar el ResultSet.
-     */
     private Valvula crearValvulaDesdeResultSet(ResultSet rs) throws SQLException {
         Valvula valvula = new Valvula();
         valvula.setId(rs.getInt("id"));
 
-        // ✅ CORRECCIÓN: Manejo correcto de wasNull()
+        // 1. Armamos el Cliente
+        Cliente cliente = null;
         int clienteId = rs.getInt("cliente_id");
         if (!rs.wasNull()) {
-            valvula.setCliente(new Cliente(clienteId, rs.getString("cliente_nombre"), null));
+            cliente = new Cliente(clienteId, rs.getString("cliente_nombre"), null);
+            valvula.setCliente(cliente);
         }
 
+        // 2. Armamos la Planta y le asociamos el Cliente
+        int plantaId = rs.getInt("planta_id");
+        if (!rs.wasNull()) {
+            Planta planta = new Planta(plantaId, rs.getString("planta_nombre"), new ArrayList<>(), cliente);
+            valvula.setPlanta(planta);
+        }
+
+        // 3. Armamos el Fluido
         int fluidoId = rs.getInt("fluido_servicio_id");
         if (!rs.wasNull()) {
             valvula.setFluido(new Fluido(fluidoId, rs.getString("fluido_servicio_nombre")));
         }
 
+        // 4. Mapeo de datos planos
         valvula.setTag(rs.getString("tag"));
         valvula.setNumeroSerie(rs.getString("numero_serie"));
         valvula.setLugarConexion(rs.getString("lugar_conexion"));
@@ -391,4 +284,13 @@ public class ValvulaDAO {
 
         return valvula;
     }
+
+    private void setNullableInt(PreparedStatement pstmt, int index, Integer value) throws SQLException {
+        if (value == null) {
+            pstmt.setNull(index, Types.INTEGER);
+        } else {
+            pstmt.setInt(index, value);
+        }
+    }
+
 }

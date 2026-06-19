@@ -1,5 +1,8 @@
 package com.mediciones.model;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 
 /**
@@ -23,12 +26,13 @@ public class Valvula implements Serializable {
     private String salidaRoscaTipo;
     private String salidaBridaDiametro;
     private String salidaBridaSerie;
+    private Planta planta;
 
     // Constructor completo
     public Valvula(int id, Cliente cliente, Fluido fluidoServicio, String tag, String numeroSerie,
                    String lugarConexion, String marca, String materialCuerpo, String entradaRoscaTipo,
                    String entradaBridaDiametro, String entradaBridaSerie, String salidaRoscaTipo,
-                   String salidaBridaDiametro, String salidaBridaSerie) {
+                   String salidaBridaDiametro, String salidaBridaSerie, Planta planta) {
         this.id = id;
         this.cliente = cliente;
         this.fluidoServicio = fluidoServicio;
@@ -43,13 +47,14 @@ public class Valvula implements Serializable {
         this.salidaRoscaTipo = salidaRoscaTipo;
         this.salidaBridaDiametro = salidaBridaDiametro;
         this.salidaBridaSerie = salidaBridaSerie;
+        this.planta =  planta;
     }
 
     // Constructor sin ID (útil para nuevos registros)
     public Valvula(Cliente cliente, Fluido fluidoServicio, String tag, String numeroSerie,
                    String lugarConexion, String marca, String materialCuerpo, String entradaRoscaTipo,
                    String entradaBridaDiametro, String entradaBridaSerie, String salidaRoscaTipo,
-                   String salidaBridaDiametro, String salidaBridaSerie) {
+                   String salidaBridaDiametro, String salidaBridaSerie, Planta planta) {
         this.cliente = cliente;
         this.fluidoServicio = fluidoServicio;
         this.tag = tag;
@@ -63,6 +68,7 @@ public class Valvula implements Serializable {
         this.salidaRoscaTipo = salidaRoscaTipo;
         this.salidaBridaDiametro = salidaBridaDiametro;
         this.salidaBridaSerie = salidaBridaSerie;
+        this.planta = planta;
     }
 
     // Constructor vacío (útil para inicialización manual o frameworks ORM como Hibernate)
@@ -182,16 +188,16 @@ public class Valvula implements Serializable {
         this.salidaBridaSerie = salidaBridaSerie;
     }
 
+    public Planta getPlanta() { return planta; }
+
+    public void setPlanta(Planta planta) { this.planta = planta; }
+
+
     /**
      * SOBREESCRITO: Representación textual de la válvula.
      */
     @Override
     public String toString() {
-        return "Válvula{" +
-                "id=" + id +
-                ", cliente=" + (cliente != null ? cliente.getNombre() : "N/A") +
-                ", tag='" + tag + '\'' +
-                ", lugarConexion='" + lugarConexion + '\'' +
-                '}';
+        return tag;
     }
 }

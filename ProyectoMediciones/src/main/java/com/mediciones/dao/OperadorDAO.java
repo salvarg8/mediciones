@@ -1,7 +1,9 @@
 package com.mediciones.dao;
 
 import com.mediciones.model.Operador;
-import com.mediciones.dao.DatabaseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,18 +14,18 @@ import java.util.List;
 
 /**
  * Data Access Object para la entidad Operador.
- * Versión corregida para funcionar con MySQL (no SQLite).
+ * Actualizado con borrado lógico y manejo de logs SLF4J.
  */
 public class OperadorDAO {
 
-    private static final String INSERT_SQL = "INSERT INTO operador (nombre, identificacion) VALUES (?, ?)";
-    private static final String SELECT_ALL_SQL = "SELECT id, nombre, identificacion FROM operador";
-    private static final String UPDATE_SQL = "UPDATE operador SET nombre = ?, identificacion = ? WHERE id = ?";
-    private static final String DELETE_SQL = "DELETE FROM operador WHERE id = ?";
+    private static final Logger logger = LoggerFactory.getLogger(OperadorDAO.class);
 
-    // ========================================================================
-    // CREATE / UPDATE (Guardar o Actualizar)
-    // ========================================================================
+    // Ajustamos las consultas SQL para soportar el borrado lógico
+    private static final String INSERT_SQL = "INSERT INTO operador (nombre, identificacion) VALUES (?, ?)";
+    private static final String SELECT_ALL_SQL = "SELECT id, nombre, identificacion, active FROM operador WHERE active = true";
+    private static final String UPDATE_SQL = "UPDATE operador SET nombre = ?, identificacion = ? WHERE id = ? AND active = true";
+    private static final String DELETE_SQL = "UPDATE operador SET active = false WHERE id = ?";
+
     /**
      * Guarda un nuevo operador o actualiza uno existente.
      * @param operador El objeto Operador a guardar o actualizar.
@@ -45,13 +47,13 @@ public class OperadorDAO {
     private boolean insertar(Operador operador) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+
             pstmt.setString(1, operador.getNombre());
             pstmt.setString(2, operador.getIdentificacion());
 
             int affectedRows = pstmt.executeUpdate();
 
             if (affectedRows > 0) {
-                // ✅ CORRECCIÓN: Usar getGeneratedKeys() (compatible con MySQL)
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         operador.setId(generatedKeys.getInt(1));
@@ -62,8 +64,7 @@ public class OperadorDAO {
             return false;
 
         } catch (SQLException e) {
-            System.err.println("Error al insertar operador: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al insertar operador: " + operador.getNombre(), e);
             return false;
         }
     }
@@ -85,8 +86,7 @@ public class OperadorDAO {
             return affectedRows > 0;
 
         } catch (SQLException e) {
-            System.err.println("Error al actualizar operador: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al actualizar operador con ID: " + operador.getId(), e);
             return false;
         }
     }
@@ -94,8 +94,9 @@ public class OperadorDAO {
     // ========================================================================
     // READ (Leer todos)
     // ========================================================================
+
     /**
-     * Obtiene todos los operadores registrados en la base de datos.
+     * Obtiene todos los operadores activos registrados en la base de datos.
      * @return Una lista de objetos Operador.
      */
     public List<Operador> obtenerTodos() {
@@ -108,21 +109,20 @@ public class OperadorDAO {
                 int id = rs.getInt("id");
                 String nombre = rs.getString("nombre");
                 String identificacion = rs.getString("identificacion");
-                operadores.add(new Operador(id, nombre, identificacion));
+
+                Operador operador = new Operador(id, nombre, identificacion);
+
+                operadores.add(operador);
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al obtener operadores: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al obtener la lista de operadores.", e);
         }
         return operadores;
     }
 
-    // ========================================================================
-    // DELETE (Eliminar)
-    // ========================================================================
     /**
-     * Elimina un operador por su ID.
+     * Realiza un borrado lógico de un operador por su ID.
      * @param id El ID del operador a eliminar.
      * @return true si la eliminación fue exitosa, false en caso contrario.
      */
@@ -135,8 +135,7 @@ public class OperadorDAO {
             return affectedRows > 0;
 
         } catch (SQLException e) {
-            System.err.println("Error al eliminar operador: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al realizar el borrado lógico del operador con ID: " + id, e);
             return false;
         }
     }

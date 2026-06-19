@@ -1,10 +1,11 @@
 package com.mediciones.view;
 
 import com.fazecast.jSerialComm.*;
-import com.mediciones.controller.RealTimeGraphController;
+import com.mediciones.gestor.RealTimeGraphGestor;
 import com.mediciones.model.Cliente;
 import com.mediciones.model.Fluido;
 import com.mediciones.model.Operador;
+import com.mediciones.model.Planta; // NUEVO: Importamos la clase Planta
 import com.mediciones.model.Valvula;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
@@ -26,7 +27,7 @@ import java.util.List;
 import javax.swing.border.TitledBorder;
 
 public class RealTimeGraph extends JFrame {
-    private final RealTimeGraphController controller;
+    private final RealTimeGraphGestor gestor;
     private JFreeChart chart;
     private XYSeries series;
     private final int MAX_POINTS = 500;
@@ -35,10 +36,11 @@ public class RealTimeGraph extends JFrame {
     private JComboBox<String> portCombo;
     private JComboBox<Integer> baudCombo;
     private Button3D startStopButton, generateReportButton, returnButton;
+    private JComboBox<Cliente> cmbCliente;
+    private JComboBox<Planta> cmbPlanta; // NUEVO: Combo de Planta
     private JComboBox<Valvula> cmbValvula;
     private JComboBox<Operador> cmbOperador;
     private JComboBox<Fluido> cmbFluido;
-    private JComboBox<Cliente> cmbCliente;
     private Button3D btnSalir;
     private Button3D btnRecargarPortal;
 
@@ -55,7 +57,7 @@ public class RealTimeGraph extends JFrame {
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraph.class);
 
     public RealTimeGraph() {
-        this.controller = new RealTimeGraphController(this);
+        this.gestor = new RealTimeGraphGestor(this);
         setTitle("Medición en Tiempo Real");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(originalWidth, originalHeight);
@@ -63,8 +65,8 @@ public class RealTimeGraph extends JFrame {
         setLayout(new BorderLayout(10, 10));
 
         initComponents();
-        controller.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido);
-        controller.init();
+        gestor.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido);
+        gestor.init();
 
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
@@ -76,11 +78,11 @@ public class RealTimeGraph extends JFrame {
             }
         });
 
-        controller.autoSelectAndOpenPort(portCombo);
+        gestor.autoSelectAndOpenPort(portCombo);
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
-                controller.closePort();
+                gestor.closePort();
             }
         });
     }
@@ -104,6 +106,7 @@ public class RealTimeGraph extends JFrame {
             ((TitledBorder) northPanel.getBorder()).setTitleFont(scaledFont);
         }
         cmbCliente.setFont(comboBoxFont);
+        if (cmbPlanta != null) cmbPlanta.setFont(comboBoxFont); // NUEVO: Ajuste de fuente
         cmbValvula.setFont(comboBoxFont);
         cmbOperador.setFont(comboBoxFont);
         cmbFluido.setFont(comboBoxFont);
@@ -156,7 +159,9 @@ public class RealTimeGraph extends JFrame {
         northPanel.add(titleLabel, BorderLayout.NORTH);
 
         JPanel northCenterPanel = new JPanel(new BorderLayout(10, 10));
-        JPanel valvulaSeleccionadaPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+
+        // NUEVO: Cambiamos GridLayout a 3 filas y 2 columnas para acomodar la Planta
+        JPanel valvulaSeleccionadaPanel = new JPanel(new GridLayout(2, 3, 5, 5));
         valvulaSeleccionadaPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(Color.GRAY, 1), "Válvula Seleccionada",
                 TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, new Font("Segoe UI", Font.BOLD, 12)));
@@ -164,8 +169,15 @@ public class RealTimeGraph extends JFrame {
         JPanel clientePanel = new JPanel(new BorderLayout(5, 0));
         clientePanel.add(new JLabel("Cliente:"), BorderLayout.WEST);
         cmbCliente = new JComboBox<>();
-        valvulaSeleccionadaPanel.add(clientePanel);
         clientePanel.add(cmbCliente, BorderLayout.CENTER);
+        valvulaSeleccionadaPanel.add(clientePanel);
+
+        // NUEVO: Panel de Planta
+        JPanel plantaPanel = new JPanel(new BorderLayout(5, 0));
+        plantaPanel.add(new JLabel("Planta:"), BorderLayout.WEST);
+        cmbPlanta = new JComboBox<>();
+        plantaPanel.add(cmbPlanta, BorderLayout.CENTER);
+        valvulaSeleccionadaPanel.add(plantaPanel);
 
         JPanel valvulaPanel = new JPanel(new BorderLayout(5, 0));
         valvulaPanel.add(new JLabel("Válvula (TAG):"), BorderLayout.WEST);
@@ -184,6 +196,9 @@ public class RealTimeGraph extends JFrame {
         cmbFluido = new JComboBox<>();
         fluidoPanel.add(cmbFluido, BorderLayout.CENTER);
         valvulaSeleccionadaPanel.add(fluidoPanel);
+
+        // NUEVO: Panel vacío para completar el espacio restante en el GridLayout(3,2)
+        valvulaSeleccionadaPanel.add(new JLabel());
 
         northCenterPanel.add(valvulaSeleccionadaPanel, BorderLayout.NORTH);
 
@@ -220,7 +235,7 @@ public class RealTimeGraph extends JFrame {
             String selected = (String) cmbSensor.getSelectedItem();
             if (selected != null) {
                 String sensorType = selected.contains("Motorola") ? "Motorola" : "Endress-Hauser";
-                controller.updateSensorType(sensorType);
+                gestor.updateSensorType(sensorType);
             }
         });
 
@@ -302,7 +317,7 @@ public class RealTimeGraph extends JFrame {
             try {
                 double newValue = Double.parseDouble(pressureText);
                 if (newValue > 0) {
-                    controller.updatePressureRequestedValue(newValue);
+                    gestor.updatePressureRequestedValue(newValue);
                 } else {
                     showErrorMessage("La Presión Solicitada debe ser mayor que cero.");
                 }
@@ -311,7 +326,7 @@ public class RealTimeGraph extends JFrame {
                 logger.error("Error al actualizar la Presión Solicitada", ex);
             }
         } else {
-            controller.updatePressureRequestedValue(0.0);
+            gestor.updatePressureRequestedValue(0.0);
         }
     }
 
@@ -339,39 +354,54 @@ public class RealTimeGraph extends JFrame {
     }
 
     private void setupListeners() {
+        // NUEVO: El listener de Cliente ahora carga las Plantas
         cmbCliente.addActionListener(e -> {
             Object selected = cmbCliente.getSelectedItem();
-            controller.updateValvulas(cmbValvula, (selected instanceof Cliente) ? (Cliente) selected : null);
+            if (selected instanceof Cliente) {
+                gestor.updatePlantas(cmbPlanta, (Cliente) selected);
+            } else {
+                cmbPlanta.removeAllItems();
+                cmbValvula.removeAllItems();
+            }
+        });
+
+        // NUEVO: Agregamos el listener de Planta para cargar las Válvulas
+        cmbPlanta.addActionListener(e -> {
+            Object selected = cmbPlanta.getSelectedItem();
+            if (selected instanceof Planta) {
+                gestor.updateValvulasPorPlanta(cmbValvula, (Planta) selected);
+            } else {
+                cmbValvula.removeAllItems();
+            }
         });
 
         startStopButton.addActionListener(e -> {
-            if (!controller.isRunning()) {
+            if (!gestor.isRunning()) {
                 double pressure = 0;
                 try {
                     pressure = Double.parseDouble(pressureRequestedField.getText().trim());
                 } catch(Exception ignored){}
                 // Metodo simula mediciones.
-                //controller.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                gestor.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
                 // Captura de datos correcta.
-                controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                //controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
             } else {
-                controller.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
+                gestor.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
             }
         });
 
-        generateReportButton.addActionListener(e -> controller.guardarExcel((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem()));
+        generateReportButton.addActionListener(e -> gestor.guardarExcel((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem()));
 
         btnSalir.addActionListener(e -> {
-            controller.closePort();
+            gestor.closePort();
             dispose();
         });
 
-        btnRecargarPortal.addActionListener(e -> controller.recargarPortal());
+        btnRecargarPortal.addActionListener(e -> gestor.recargarPortal());
 
-        returnButton.addActionListener(e -> controller.discardData());
+        returnButton.addActionListener(e -> gestor.discardData());
     }
 
-    // Public methods for Controller to update UI
     public void setLedColor(Color color) {
         ledLabel.setBackground(color);
     }
@@ -401,6 +431,7 @@ public class RealTimeGraph extends JFrame {
 
     public void setInfoFieldsEnabled(boolean enabled) {
         cmbCliente.setEnabled(enabled);
+        cmbPlanta.setEnabled(enabled); // NUEVO: También habilitamos/deshabilitamos la Planta
         cmbValvula.setEnabled(enabled);
         cmbOperador.setEnabled(enabled);
         cmbFluido.setEnabled(enabled);
@@ -448,7 +479,6 @@ public class RealTimeGraph extends JFrame {
         }
     }
 
-
     public String getSelectedPressureUnit() {
         return selectedPressureUnit;
     }
@@ -460,7 +490,4 @@ public class RealTimeGraph extends JFrame {
     public Fluido getSelectedFluido() {
         return (Fluido) cmbFluido.getSelectedItem();
     }
-
-
-
 }

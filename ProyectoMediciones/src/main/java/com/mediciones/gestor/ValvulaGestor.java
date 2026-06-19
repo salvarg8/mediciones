@@ -1,9 +1,7 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.dao.ValvulaDAO;
 import com.mediciones.model.Valvula;
-import com.mediciones.model.Cliente;
-import com.mediciones.model.Fluido;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -11,11 +9,11 @@ import java.util.List;
  * Controlador para la lógica de negocio relacionada con la entidad Válvula.
  * Actúa como intermediario entre la Vista (FrmValvulasCRUD) y el DAO (ValvulaDAO).
  */
-public class ValvulaController {
+public class ValvulaGestor {
 
     private final ValvulaDAO valvulaDAO;
 
-    public ValvulaController() {
+    public ValvulaGestor() {
         this.valvulaDAO = new ValvulaDAO(); // Usa "valvulaDAO" en lugar de "ValvulaDAO"
     }
 
@@ -84,15 +82,6 @@ public class ValvulaController {
 
 
     /**
-     * Obtiene todos los clientes registrados.
-     * Este método es útil para poblar los ComboBox en la vista.
-     * @return Lista de objetos Cliente.
-     */
-    public List<Cliente> obtenerTodosClientes() {
-        return valvulaDAO.obtenerTodosClientes(); // Usa la instancia "valvulaDAO"
-    }
-
-    /**
      * Obtiene una válvula específica por su TAG.
      * @param tag El TAG de la válvula.
      * @return El objeto Valvula correspondiente al TAG, o null si no existe.
@@ -101,12 +90,4 @@ public class ValvulaController {
         return valvulaDAO.obtenerPorTag(tag); // Delega la lógica al DAO
     }
 
-    /**
-     * Obtiene todos los fluidos de servicio registrados.
-     * Este método es útil para poblar los ComboBox en la vista.
-     * @return Lista de objetos FluidoServicio.
-     */
-    public List<Fluido> obtenerTodosFluidosServicio() {
-        return valvulaDAO.obtenerTodosFluidos(); // Usa la instancia "valvulaDAO"
-    }
 }

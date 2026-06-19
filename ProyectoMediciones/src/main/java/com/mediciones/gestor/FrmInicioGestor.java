@@ -1,4 +1,4 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.model.SensorCalibracion;
@@ -12,11 +12,11 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class FrmInicioController {
-    private static final Logger LOGGER = Logger.getLogger(FrmInicioController.class.getName());
+public class FrmInicioGestor {
+    private static final Logger LOGGER = Logger.getLogger(FrmInicioGestor.class.getName());
     private final FrmInicio view;
-    private final SensorCalibracionController calibracionController;
-    private final UbicacionController ubicacionController;
+    private final SensorCalibracionGestor calibracionController;
+    private final UbicacionGestor ubicacionGestor;
 
     private SerialPort comPort;
     private Thread captureThread;
@@ -25,15 +25,15 @@ public class FrmInicioController {
     private double a1 = 1.0, c1 = 0.0;
     private double a2 = 1.0, c2 = 0.0;
 
-    public FrmInicioController(FrmInicio view) {
+    public FrmInicioGestor(FrmInicio view) {
         this.view = view;
-        this.calibracionController = new SensorCalibracionController();
-        this.ubicacionController = new UbicacionController();
+        this.calibracionController = new SensorCalibracionGestor();
+        this.ubicacionGestor = new UbicacionGestor();
     }
 
     public boolean existeConfiguracion() {
-        ConfiguracionController configuracionController = new ConfiguracionController();
-        return configuracionController.existeConfiguracion();
+        ConfiguracionGestor configuracionGestor = new ConfiguracionGestor();
+        return configuracionGestor.existeConfiguracion();
     }
 
     public void cargarConstantesCalibracion() {
@@ -147,7 +147,7 @@ public class FrmInicioController {
             File selectedDir = chooser.getSelectedFile();
             String ruta = selectedDir.getAbsolutePath();
 
-            boolean ok = ubicacionController.guardarUbicacion(ruta);
+            boolean ok = ubicacionGestor.guardarUbicacion(ruta);
 
             if (ok) {
                 JOptionPane.showMessageDialog(

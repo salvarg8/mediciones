@@ -1,8 +1,8 @@
 package com.mediciones.reportes;
 
 import com.mediciones.dao.ConfiguracionDAO;
+import com.mediciones.model.Configuracion;
 import com.mediciones.repository.PortalRepository;
-import com.mediciones.view.FrmOperadorCRUD;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
@@ -19,10 +19,9 @@ import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties;
 import org.apache.poi.xddf.usermodel.XDDFLineProperties;
 import com.mediciones.dao.ValvulaDAO;
 import com.mediciones.model.Valvula;
-import com.mediciones.dao.ClienteDAO;
-import com.mediciones.model.Cliente;
+
 import java.util.Date;
-import com.mediciones.controller.UbicacionController;
+import com.mediciones.gestor.UbicacionGestor;
 import com.mediciones.model.Ubicacion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +52,10 @@ public class ExcelGenerator {
     }
 
     public void generarExcel(String archivoCSV, String archivoExcel) throws IOException {
+        if (archivoCSV == null || archivoExcel == null) {
+            throw new IllegalArgumentException("Las rutas de los archivos no pueden ser nulas");
+        }
+
         // 1. Usamos directamente la ruta absoluta que nos envió RealTimeGraph
         File archivoExcelFile = new File(archivoExcel);
         String rutaCarpeta = archivoExcelFile.getParent();
@@ -113,13 +116,16 @@ public class ExcelGenerator {
     }
 
     private void escribirPresionAperturaSolicitada() {
-        escribirCelda(11, 6, presionAperturaSolicitada.toString()); // F12 - Valor máximo de presión
-
+        if (presionAperturaSolicitada != null) {
+            escribirCelda(11, 6, presionAperturaSolicitada.toString());
+        } else {
+            escribirCelda(11, 6, "N/A"); // O déjalo en blanco
+        }
     }
 
     private String construirRutaArchivo(String nombreArchivo) {
-        UbicacionController ubicacionController = new UbicacionController();
-        Ubicacion ubicacion = ubicacionController.obtenerUbicacion();
+        UbicacionGestor ubicacionGestor = new UbicacionGestor();
+        Ubicacion ubicacion = ubicacionGestor.obtenerUbicacion();
         if (ubicacion == null || ubicacion.getUbicacion() == null || ubicacion.getUbicacion().isEmpty()) {
             return nombreArchivo;
         }
@@ -156,7 +162,8 @@ public class ExcelGenerator {
 
     private void escribirDatosValvula(int valvulaId) {
         Valvula valvula;
-        if (configuracionDAO.obtenerConfiguracion().getOrigenDatos().equals("TXT")) {
+        Configuracion configuracion = configuracionDAO.obtenerConfiguracion();
+        if (configuracion != null && "TXT".equals(configuracion.getOrigenDatos())) {
             valvula = portalRepository.getValvulaPorId(valvulaId);
         } else {
             valvula = valvulaDAO.obtenerPorId(valvulaId);

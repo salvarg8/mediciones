@@ -1,6 +1,6 @@
 package com.mediciones.view;
 
-import com.mediciones.controller.ConfiguracionController;
+import com.mediciones.gestor.ConfiguracionGestor;
 import com.mediciones.model.Configuracion;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
@@ -15,7 +15,8 @@ public class FrmConfiguracion extends JFrame {
 
     // Labels
     private JLabel lblOrigen;
-    private JLabel lblRuta;
+    private JLabel lblRutaTxt;
+    private JLabel lblRutaReportes;
 
     // Radio buttons
     private JRadioButton rbBaseDatos;
@@ -24,14 +25,16 @@ public class FrmConfiguracion extends JFrame {
 
     // Ruta
     private JTextField txtRutaArchivo;
+    private JTextField txtRutaReportes;
 
     // Botones
     private Button3D btnBuscar;
+    private Button3D btnBuscarReportes;
     private Button3D btnGuardar;
     private Button3D btnCancelar;
 
     // Controller
-    private final ConfiguracionController controller;
+    private final ConfiguracionGestor controller;
 
     private static final Logger logger = LoggerFactory.getLogger(FrmConfiguracion.class);
 
@@ -39,7 +42,7 @@ public class FrmConfiguracion extends JFrame {
 
         super("Configuración");
 
-        controller = new ConfiguracionController();
+        controller = new ConfiguracionGestor();
 
         // Evitar que la ventana se cierre automáticamente al darle a la 'X'
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -118,8 +121,8 @@ public class FrmConfiguracion extends JFrame {
         // RUTA DEL ARCHIVO
         // ============================================
 
-        lblRuta = new JLabel("Ruta Portal:");
-        lblRuta.setFont(font);
+        lblRutaTxt = new JLabel("Ruta Portal:");
+        lblRutaTxt.setFont(font);
 
         txtRutaArchivo = new JTextField(35);
         txtRutaArchivo.setFont(font);
@@ -130,7 +133,7 @@ public class FrmConfiguracion extends JFrame {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        panelPrincipal.add(lblRuta, gbc);
+        panelPrincipal.add(lblRutaTxt, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
@@ -141,6 +144,33 @@ public class FrmConfiguracion extends JFrame {
         gbc.weightx = 0;
 
         panelPrincipal.add(btnBuscar, gbc);
+
+        // ============================================
+        // RUTA DE LOS REPORTES
+        // ============================================
+        lblRutaReportes = new JLabel("Ruta Reportes:");
+        lblRutaReportes.setFont(font);
+
+        txtRutaReportes = new JTextField(35);
+        txtRutaReportes.setFont(font);
+
+        btnBuscarReportes = new Button3D("...", new Color(220, 220, 255));
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        panelPrincipal.add(lblRutaReportes, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+
+        panelPrincipal.add(txtRutaReportes, gbc);
+
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+
+        panelPrincipal.add(btnBuscarReportes, gbc);
 
         // ============================================
         // BOTONES

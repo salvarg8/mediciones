@@ -1,9 +1,9 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.dao.ConfiguracionDAO;
 import com.mediciones.model.Configuracion;
 
-public class ConfiguracionController {
+public class ConfiguracionGestor {
 
     private final ConfiguracionDAO dao =
             new ConfiguracionDAO();

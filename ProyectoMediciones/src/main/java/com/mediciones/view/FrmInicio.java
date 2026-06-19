@@ -6,17 +6,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.Map;
-import javax.swing.border.AbstractBorder;
 import javax.swing.border.LineBorder;
 
-import com.mediciones.controller.FrmInicioController;
+import com.mediciones.gestor.FrmInicioGestor;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FrmInicio extends JFrame implements ActionListener {
 
-    private final FrmInicioController controller;
+    private final FrmInicioGestor controller;
 
     private JTextArea txtMotorola;
     private JTextArea txtEndressHauser;
@@ -30,7 +29,7 @@ public class FrmInicio extends JFrame implements ActionListener {
     private Button3D btnOperador;
     private Button3D btnValvulas;
     private Button3D btnFluidos;
-    private Button3D btnReportes;
+    private Button3D btnPlantas;
     private Button3D btnCalibracion;
     private Button3D btnMedicion;
     private Button3D btnSalir;
@@ -51,7 +50,7 @@ public class FrmInicio extends JFrame implements ActionListener {
 
 
     public FrmInicio() {
-        this.controller = new FrmInicioController(this);
+        this.controller = new FrmInicioGestor(this);
 
         setTitle("Sistema de Documentación de Banco de Pruebas");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -188,8 +187,8 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnClientes.setBounds(startXBtn, 230, 120, 40);
         btnOperador = new Button3D("Operador", new Color(200, 255, 200), true);
         btnOperador.setBounds(startXBtn + 140, 230, 120, 40);
-        btnReportes = new Button3D("Reportes", new Color(200, 170, 255), true);
-        btnReportes.setBounds(startXBtn + 280, 230, 120, 40);
+        btnPlantas = new Button3D("Plantas", new Color(200, 255, 200), true);
+        btnPlantas.setBounds(startXBtn + 280, 230, 120, 40);
         btnMedicion = new Button3D("Medicion", Color.GREEN.brighter(), true);
         btnMedicion.setBounds(startXBtn + 420, 230, 120, 40);
         btnReconectar = new Button3D("Refrescar", new Color(200, 220, 255), true);
@@ -212,7 +211,7 @@ public class FrmInicio extends JFrame implements ActionListener {
 
         scalablePanel.add(btnClientes);
         scalablePanel.add(btnOperador);
-        scalablePanel.add(btnReportes);
+        scalablePanel.add(btnPlantas);
         scalablePanel.add(btnMedicion);
         scalablePanel.add(btnReconectar);
         scalablePanel.add(btnValvulas);
@@ -222,7 +221,7 @@ public class FrmInicio extends JFrame implements ActionListener {
 
         originalBounds.put(btnClientes, btnClientes.getBounds());
         originalBounds.put(btnOperador, btnOperador.getBounds());
-        originalBounds.put(btnReportes, btnReportes.getBounds());
+        originalBounds.put(btnPlantas, btnPlantas.getBounds());
         originalBounds.put(btnMedicion, btnMedicion.getBounds());
         originalBounds.put(btnReconectar, btnReconectar.getBounds());
         originalBounds.put(btnValvulas, btnValvulas.getBounds());
@@ -257,7 +256,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnValvulas.addActionListener(this);
         btnFluidos.addActionListener(this);
         btnCalibracion.addActionListener(this);
-        btnReportes.addActionListener(this);
+        btnPlantas.addActionListener(this);
         btnMedicion.addActionListener(this);
         btnConfiguracion.addActionListener(this);
         btnSalir.addActionListener(e -> {
@@ -333,9 +332,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         else if (source == btnCalibracion) f = new FrmCalibracionSensor();
         else if (source == btnMedicion) f = new RealTimeGraph();
         else if (source == btnConfiguracion) f = new FrmConfiguracion();
-        else if (source == btnReportes) {
-            controller.openFrmReportes(this);
-        }
+        else if (source == btnPlantas) f = new FrmPlantaCRUD();
 
         if (f != null) {
             f.setLocationRelativeTo(this);

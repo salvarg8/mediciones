@@ -1,17 +1,15 @@
 package com.mediciones.dao;
 
-import com.fazecast.jSerialComm.*;
-import com.mediciones.controller.ClienteController;
-import com.mediciones.controller.FluidoController;
-import com.mediciones.controller.OperadorController;
-import com.mediciones.controller.ValvulaController;
+import com.mediciones.gestor.ClienteGestor;
+import com.mediciones.gestor.FluidoGestor;
+import com.mediciones.gestor.OperadorGestor;
+import com.mediciones.gestor.ValvulaGestor;
 import com.mediciones.model.*;
 import com.mediciones.repository.ArchivoNoEncontradoException;
 import com.mediciones.repository.PortalRepository;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -22,18 +20,18 @@ import java.util.Objects;
  */
 public class RealTimeGraphDAO {
 
-    private final ValvulaController valvulaController;
-    private final ClienteController clienteController;
-    private final OperadorController operadorController;
-    private final FluidoController fluidoController;
+    private final ValvulaGestor valvulaGestor;
+    private final ClienteGestor clienteController;
+    private final OperadorGestor operadorGestor;
+    private final FluidoGestor fluidoGestor;
     private final ConfiguracionDAO configuracionDAO;
     private final  PortalRepository portalRepository;
 
     public RealTimeGraphDAO() {
-        this.valvulaController = new ValvulaController();
-        this.clienteController = new ClienteController();
-        this.operadorController = new OperadorController();
-        this.fluidoController = new FluidoController();
+        this.valvulaGestor = new ValvulaGestor();
+        this.clienteController = new ClienteGestor();
+        this.operadorGestor = new OperadorGestor();
+        this.fluidoGestor = new FluidoGestor();
         this.configuracionDAO = new ConfiguracionDAO();
         this.portalRepository = PortalRepository.getInstancia();
     }
@@ -71,29 +69,29 @@ public class RealTimeGraphDAO {
             return repository.getValvulasPorCliente(clienteId);
         }
 
-        return valvulaController.obtenerValvulasPorCliente(clienteId);
+        return valvulaGestor.obtenerValvulasPorCliente(clienteId);
     }
 
     public List<Operador> obtenerTodosOperadores() {
-        return operadorController.obtenerTodosOperadores();
+        return operadorGestor.obtenerTodosOperadores();
     }
 
     public Operador obtenerOperadorPorNombre(String nombre) {
         if (Objects.isNull(nombre) || nombre.trim().isEmpty()) {
             return null;
         }
-        return operadorController.obtenerOperadorPorNombre(nombre);
+        return operadorGestor.obtenerOperadorPorNombre(nombre);
     }
 
     public List<Fluido> obtenerTodosFluidos() {
-        return fluidoController.obtenerTodosFluidos();
+        return fluidoGestor.obtenerTodosFluidos();
     }
 
     public Fluido obtenerFluidoPorNombre(String nombre) {
         if (Objects.isNull(nombre) || nombre.trim().isEmpty()) {
             return null;
         }
-        return fluidoController.obtenerFluidoPorNombre(nombre);
+        return fluidoGestor.obtenerFluidoPorNombre(nombre);
     }
 
     // --- Métodos para cargar componentes UI ---

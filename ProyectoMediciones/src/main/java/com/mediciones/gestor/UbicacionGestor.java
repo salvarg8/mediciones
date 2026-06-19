@@ -1,4 +1,4 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.dao.UbicacionDAO;
 import com.mediciones.model.Ubicacion;
@@ -8,9 +8,9 @@ import com.mediciones.model.Ubicacion;
  * del archivo Excel utilizado por ExcelGenerator.
  * Actúa como intermediario entre la Vista y el DAO (UbicacionDAO).
  */
-public class UbicacionController {
+public class UbicacionGestor {
 
-    private UbicacionDAO dao = new UbicacionDAO();
+    private final UbicacionDAO dao = new UbicacionDAO();
 
     public boolean guardarUbicacion(String ruta) {
         Ubicacion u = new Ubicacion();

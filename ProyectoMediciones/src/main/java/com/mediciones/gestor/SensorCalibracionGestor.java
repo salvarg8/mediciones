@@ -1,13 +1,13 @@
-package com.mediciones.controller;
+package com.mediciones.gestor;
 
 import com.mediciones.dao.SensorCalibracionDAO;
 import com.mediciones.model.SensorCalibracion;
 
-public class SensorCalibracionController {
+public class SensorCalibracionGestor {
 
     private SensorCalibracionDAO sensorCalibracionDAO;
 
-    public SensorCalibracionController() {
+    public SensorCalibracionGestor() {
         // Inicializar el DAO. Ya no requiere try-catch porque la conexión 
         // se maneja centralizadamente en DatabaseManager.
         sensorCalibracionDAO = new SensorCalibracionDAO();
@@ -23,8 +23,4 @@ public class SensorCalibracionController {
         return sensorCalibracionDAO.obtenerUltimaCalibracionPorSensor(sensorType);
     }
 
-    // Cerrar conexión (opcional, el DatabaseManager lo hace al salir)
-    public void cerrarConexion() {
-        sensorCalibracionDAO.cerrarConexion();
-    }
 }
