@@ -27,12 +27,13 @@ public class Valvula implements Serializable {
     private String salidaBridaDiametro;
     private String salidaBridaSerie;
     private Planta planta;
+    private TipoValvula tipoValvula;
 
     // Constructor completo
     public Valvula(int id, Cliente cliente, Fluido fluidoServicio, String tag, String numeroSerie,
                    String lugarConexion, String marca, String materialCuerpo, String entradaRoscaTipo,
                    String entradaBridaDiametro, String entradaBridaSerie, String salidaRoscaTipo,
-                   String salidaBridaDiametro, String salidaBridaSerie, Planta planta) {
+                   String salidaBridaDiametro, String salidaBridaSerie, Planta planta, TipoValvula tipoValvula) {
         this.id = id;
         this.cliente = cliente;
         this.fluidoServicio = fluidoServicio;
@@ -48,6 +49,7 @@ public class Valvula implements Serializable {
         this.salidaBridaDiametro = salidaBridaDiametro;
         this.salidaBridaSerie = salidaBridaSerie;
         this.planta =  planta;
+        this.tipoValvula = tipoValvula;
     }
 
     // Constructor sin ID (útil para nuevos registros)
@@ -192,6 +194,21 @@ public class Valvula implements Serializable {
 
     public void setPlanta(Planta planta) { this.planta = planta; }
 
+    public Fluido getFluidoServicio() {
+        return fluidoServicio;
+    }
+
+    public void setFluidoServicio(Fluido fluidoServicio) {
+        this.fluidoServicio = fluidoServicio;
+    }
+
+    public TipoValvula getTipoValvula() {
+        return tipoValvula;
+    }
+
+    public void setTipoValvula(TipoValvula tipoValvula) {
+        this.tipoValvula = tipoValvula;
+    }
 
     /**
      * SOBREESCRITO: Representación textual de la válvula.

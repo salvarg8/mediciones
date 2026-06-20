@@ -156,7 +156,7 @@ public final class DatabaseManager {
         try {
             return DriverManager.getConnection(buildConnectionUrl(), user, password);
         } catch (SQLException ex) {
-            logger.error("Fallo al conectar a MySQL" , ex );
+            logger.error("Fallo al conectar a MySQL", ex);
             throw new IllegalStateException("Fallo al conectar a MySQL: " + ex.getMessage(), ex);
         }
     }
@@ -167,7 +167,7 @@ public final class DatabaseManager {
             updateSchema(conn);
             System.out.println("✅ Base de datos inicializada correctamente.");
         } catch (SQLException ex) {
-            logger.error("Error al inicializar la base de datos.",ex);
+            logger.error("Error al inicializar la base de datos.", ex);
             throw new IllegalStateException("Error al inicializar la base de datos.", ex);
         }
     }
@@ -251,6 +251,12 @@ public final class DatabaseManager {
                     "origen_datos TEXT NOT NULL," +
                     "ruta_archivo TEXT" +
                     ") ENGINE=InnoDB;");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS tipos_valvula (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "nombre VARCHAR(255) NOT NULL UNIQUE," +
+                    "active BOOLEAN DEFAULT TRUE" +
+                    ") ENGINE=InnoDB;");
         }
     }
 
@@ -283,6 +289,9 @@ public final class DatabaseManager {
                     "FOREIGN KEY (fluido_servicio_id) REFERENCES fluidos(id)");
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_planta " +
                     "FOREIGN KEY (planta_id) REFERENCES plantas(id)");
+
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN tipo_valvula_id INT");
+            executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_tipo FOREIGN KEY (tipo_valvula_id) REFERENCES tipos_valvula(id)");
         }
     }
 
