@@ -24,6 +24,8 @@ public class RealTimeGraphGestor {
     private final RealTimeGraph view;
     private final RealTimeGraphDAO dao;
     private final UbicacionGestor ubicacionGestor;
+    private final ValvulaGestor valvulaGestor;
+    private final TipoValvulaGestor tipoValvulaGestor; // NUEVO: Gestor de Tipos
 
     private SerialPort comPort;
     private volatile boolean running = false;
@@ -48,6 +50,8 @@ public class RealTimeGraphGestor {
         this.view = view;
         this.dao = new RealTimeGraphDAO();
         this.ubicacionGestor = new UbicacionGestor();
+        this.valvulaGestor = new ValvulaGestor();
+        this.tipoValvulaGestor = new TipoValvulaGestor(); // NUEVO: Inicialización
     }
 
     public void init() {
@@ -396,14 +400,48 @@ public class RealTimeGraphGestor {
         }
     }
 
-    public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido) {
+    public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido, JComboBox<TipoValvula> cmbTipoValvula) {
         try {
             dao.cargarComboBoxClientes(cmbCliente);
         } catch (Exception ex) {
-            view.showErrorMessage("Error al cargar clientes: " + ex.getMessage());
+            logger.error("Error al cargar el ComboBox de Clientes:\n" + ex.getMessage(), ex);
         }
         cmbOperador.setModel(new DefaultComboBoxModel<>(dao.obtenerTodosOperadores().toArray(new Operador[0])));
         cmbFluido.setModel(new DefaultComboBoxModel<>(dao.obtenerTodosFluidos().toArray(new Fluido[0])));
+        if (cmbTipoValvula != null) {
+            cmbTipoValvula.removeAllItems();
+        }
+    }
+
+    public void updateTiposValvulaPorPlanta(JComboBox<TipoValvula> cmbTipo, Planta planta) {
+        if (cmbTipo == null) return;
+        cmbTipo.removeAllItems();
+
+        if (planta != null && planta.getValvulas() != null) {
+            cmbTipo.addItem(new TipoValvula(0, "Todos los tipos"));
+
+            // Usamos un Map para guardar los tipos únicos (evitando duplicados por ID)
+            java.util.Map<Integer, TipoValvula> tiposUnicos = new java.util.HashMap<>();
+
+            for (Valvula v : planta.getValvulas()) {
+                if (v.getTipoValvula() != null && v.getTipoValvula().getId() != null) {
+                    tiposUnicos.put(v.getTipoValvula().getId(), v.getTipoValvula());
+                }
+            }
+
+            // Convertimos a lista y ordenamos alfabéticamente
+            java.util.List<TipoValvula> listaTipos = new java.util.ArrayList<>(tiposUnicos.values());
+            listaTipos.sort((t1, t2) -> {
+                String n1 = t1.getNombre() == null ? "" : t1.getNombre();
+                String n2 = t2.getNombre() == null ? "" : t2.getNombre();
+                return n1.compareToIgnoreCase(n2);
+            });
+
+            // Agregamos al combobox
+            for (TipoValvula tv : listaTipos) {
+                cmbTipo.addItem(tv);
+            }
+        }
     }
 
     public void updateValvulas(JComboBox<Valvula> cmbValvula, Cliente cliente) {
@@ -428,7 +466,7 @@ public class RealTimeGraphGestor {
     }
 
     public void startSimulatedDataCapture(Cliente cliente, Valvula valvula, double currentPressureRequested) {
-         logger.info("inicio simulacion");
+        logger.info("inicio simulacion");
         if (dataThread != null && dataThread.isAlive()) {
             return;
         }
@@ -507,28 +545,48 @@ public class RealTimeGraphGestor {
         }
     }
 
+    // NUEVO: Método para actualizar Válvulas Filtradas con ORDENAMIENTO INCLUIDO
+    public void updateValvulasFiltradas(JComboBox<Valvula> cmbValvula, Planta planta, TipoValvula tipoFiltro) {
+        if (planta == null || cmbValvula == null) return;
+
+        List<Valvula> valvulas = planta.getValvulas();
+        cmbValvula.removeAllItems();
+
+        if (valvulas != null) {
+            // Creamos una copia para ordenarlas por Tag alfabéticamente
+            List<Valvula> valvulasOrdenadas = new ArrayList<>(valvulas);
+            valvulasOrdenadas.sort((v1, v2) -> {
+                String tag1 = v1.getTag() == null ? "" : v1.getTag();
+                String tag2 = v2.getTag() == null ? "" : v2.getTag();
+                return tag1.compareToIgnoreCase(tag2);
+            });
+
+            for (Valvula v : valvulasOrdenadas) {
+                // Si el filtro es nulo, es 0 ("Todos los tipos"), o coincide con el de la válvula
+                if (tipoFiltro == null || tipoFiltro.getId() == 0 ||
+                        (v.getTipoValvula() != null && v.getTipoValvula().getId().equals(tipoFiltro.getId()))) {
+                    cmbValvula.addItem(v);
+                }
+            }
+        }
+    }
+
     public void updateValvulasPorPlanta(JComboBox<Valvula> cmbValvula, Planta selected) {
         if (cmbValvula == null) {
             return;
         }
 
-        // 1. Limpiamos las válvulas anteriores
         cmbValvula.removeAllItems();
 
-        // 2. Verificamos que la planta sea válida y tenga válvulas
         if (selected != null && selected.getValvulas() != null) {
-
-            // Creamos una copia de la lista para no modificar la original al ordenar
             List<Valvula> valvulasDePlanta = new ArrayList<>(selected.getValvulas());
 
-            // 3. Ordenamos las válvulas por su Tag de forma alfabética (ideal para UI)
             valvulasDePlanta.sort((v1, v2) -> {
                 String tag1 = v1.getTag() == null ? "" : v1.getTag();
                 String tag2 = v2.getTag() == null ? "" : v2.getTag();
                 return tag1.compareToIgnoreCase(tag2);
             });
 
-            // 4. Cargamos las válvulas ordenadas en el JComboBox
             for (Valvula valvula : valvulasDePlanta) {
                 cmbValvula.addItem(valvula);
             }

@@ -13,7 +13,7 @@ public class TipoValvula {
 
     public TipoValvula() {}
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 

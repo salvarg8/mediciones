@@ -33,11 +33,10 @@ public class TipoValvulaDAO {
     }
 
     public boolean insertar(TipoValvula tipoValvula) {
-        String sql = "INSERT INTO tipos_valvula VALUES (?, ?, ?)";
+        String sql = "INSERT INTO tipos_valvula (nombre) VALUES (?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, tipoValvula.getNombre());
-            pstmt.setBoolean(2, tipoValvula.getActive());
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -81,10 +80,9 @@ public class TipoValvulaDAO {
     }
 
     public boolean guardarOActualizar(TipoValvula tipoValvula) {
-        if (tipoValvula.getId() == 0) {
+        if (tipoValvula.getId() == null) {
             return insertar(tipoValvula);
         } else {
-            // Si el ID es mayor a 0, significa que ya existe y lo estamos editando
             return actualizar(tipoValvula);
         }
     }

@@ -30,6 +30,7 @@ public class FrmInicio extends JFrame implements ActionListener {
     private Button3D btnValvulas;
     private Button3D btnFluidos;
     private Button3D btnPlantas;
+    private Button3D btnTiposValvula; // NUEVO: Declarado aquí
     private Button3D btnCalibracion;
     private Button3D btnMedicion;
     private Button3D btnSalir;
@@ -183,6 +184,8 @@ public class FrmInicio extends JFrame implements ActionListener {
         originalBounds.put(unidadPanel, unidadPanel.getBounds());
 
         int startXBtn = (BASE_WIDTH - 680) / 2;
+
+        // --- FILA 1 ---
         btnClientes = new Button3D("Clientes", new Color(200, 255, 200), true);
         btnClientes.setBounds(startXBtn, 230, 120, 40);
         btnOperador = new Button3D("Operador", new Color(200, 255, 200), true);
@@ -194,20 +197,21 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnReconectar = new Button3D("Refrescar", new Color(200, 220, 255), true);
         btnReconectar.setBounds(startXBtn + 560, 230, 120, 40);
 
+        // --- FILA 2 ---
         btnValvulas = new Button3D("Valvulas", new Color(200, 255, 200), true);
         btnValvulas.setBounds(startXBtn, 290, 120, 40);
         btnFluidos = new Button3D("Fluidos", new Color(200, 255, 200), true);
         btnFluidos.setBounds(startXBtn + 140, 290, 120, 40);
-        btnCalibracion = new Button3D("Calibrar", Color.YELLOW, true);
-        btnCalibracion.setBounds(startXBtn + 280, 290, 120, 40);
+        btnTiposValvula = new Button3D("Tipos Válvula", new Color(200, 255, 200), true);
+        btnTiposValvula.setBounds(startXBtn + 280, 290, 120, 40);
         btnConfiguracion = new Button3D("Configuración", new Color(255, 255, 200), true);
         btnConfiguracion.setBounds(startXBtn + 420, 290, 120, 40);
-        scalablePanel.add(btnConfiguracion);
+        btnCalibracion = new Button3D("Calibrar", Color.YELLOW, true);
+        btnCalibracion.setBounds(startXBtn + 560, 290, 120, 40);
 
-        originalBounds.put(btnConfiguracion, btnConfiguracion.getBounds());
-
+        // --- FILA 3 ---
         btnSalir = new Button3D("Salir", new Color(255, 200, 200), true);
-        btnSalir.setBounds(startXBtn + 560, 290, 120, 40);
+        btnSalir.setBounds((BASE_WIDTH - 120) / 2, 350, 120, 40);
 
         scalablePanel.add(btnClientes);
         scalablePanel.add(btnOperador);
@@ -216,6 +220,8 @@ public class FrmInicio extends JFrame implements ActionListener {
         scalablePanel.add(btnReconectar);
         scalablePanel.add(btnValvulas);
         scalablePanel.add(btnFluidos);
+        scalablePanel.add(btnTiposValvula);
+        scalablePanel.add(btnConfiguracion);
         scalablePanel.add(btnCalibracion);
         scalablePanel.add(btnSalir);
 
@@ -226,6 +232,8 @@ public class FrmInicio extends JFrame implements ActionListener {
         originalBounds.put(btnReconectar, btnReconectar.getBounds());
         originalBounds.put(btnValvulas, btnValvulas.getBounds());
         originalBounds.put(btnFluidos, btnFluidos.getBounds());
+        originalBounds.put(btnTiposValvula, btnTiposValvula.getBounds());
+        originalBounds.put(btnConfiguracion, btnConfiguracion.getBounds());
         originalBounds.put(btnCalibracion, btnCalibracion.getBounds());
         originalBounds.put(btnSalir, btnSalir.getBounds());
 
@@ -255,10 +263,11 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnOperador.addActionListener(this);
         btnValvulas.addActionListener(this);
         btnFluidos.addActionListener(this);
-        btnCalibracion.addActionListener(this);
         btnPlantas.addActionListener(this);
-        btnMedicion.addActionListener(this);
+        btnTiposValvula.addActionListener(this);
         btnConfiguracion.addActionListener(this);
+        btnCalibracion.addActionListener(this);
+        btnMedicion.addActionListener(this);
         btnSalir.addActionListener(e -> {
             controller.detenerComunicacionSerial();
             System.exit(0);
@@ -268,7 +277,7 @@ public class FrmInicio extends JFrame implements ActionListener {
             iniciarComunicacionSerial();
         });
 
-        // deshabilito botones
+        // deshabilito botones (temporal si así lo tenías)
         btnClientes.setEnabled(true);
         btnValvulas.setEnabled(true);
         btnOperador.setEnabled(true);
@@ -329,10 +338,11 @@ public class FrmInicio extends JFrame implements ActionListener {
         else if (source == btnOperador) f = new FrmOperadorCRUD();
         else if (source == btnValvulas) f = new FrmValvulasCRUD();
         else if (source == btnFluidos) f = new FrmFluidosCRUD();
+        else if (source == btnPlantas) f = new FrmPlantaCRUD();
+        else if (source == btnTiposValvula) f = new FrmTipoValvulaCRUD();
+        else if (source == btnConfiguracion) f = new FrmConfiguracion();
         else if (source == btnCalibracion) f = new FrmCalibracionSensor();
         else if (source == btnMedicion) f = new RealTimeGraph();
-        else if (source == btnConfiguracion) f = new FrmConfiguracion();
-        else if (source == btnPlantas) f = new FrmPlantaCRUD();
 
         if (f != null) {
             f.setLocationRelativeTo(this);

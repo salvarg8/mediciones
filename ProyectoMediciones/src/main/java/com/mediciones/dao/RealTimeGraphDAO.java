@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * Clase de ayuda para operaciones de interfaz de usuario relacionadas con gráficos en tiempo real.
  * NOTA: Aunque se llama "DAO", esta clase NO accede directamente a la base de datos.
- *       Actúa como intermediario entre la UI y los controladores.
+ * Actúa como intermediario entre la UI y los controladores.
  */
 public class RealTimeGraphDAO {
 
@@ -25,7 +25,7 @@ public class RealTimeGraphDAO {
     private final OperadorGestor operadorGestor;
     private final FluidoGestor fluidoGestor;
     private final ConfiguracionDAO configuracionDAO;
-    private final  PortalRepository portalRepository;
+    private final PortalRepository portalRepository;
 
     public RealTimeGraphDAO() {
         this.valvulaGestor = new ValvulaGestor();
@@ -36,37 +36,23 @@ public class RealTimeGraphDAO {
         this.portalRepository = PortalRepository.getInstancia();
     }
 
-    // --- Métodos de acceso a datos (delegan a los controladores) ---
-
     public List<Cliente> obtenerTodosClientes() throws ArchivoNoEncontradoException {
+        Configuracion config = configuracionDAO.obtenerConfiguracion();
 
-        Configuracion config =
-                configuracionDAO.obtenerConfiguracion();
-
-        if ("TXT".equalsIgnoreCase(config.getOrigenDatos())) {
-
-            PortalRepository repository = PortalRepository.getInstancia();
-
-            repository.recargar(config.getRutaArchivo());
-
-            return repository.getClientes();
+        if (config != null && "TXT".equalsIgnoreCase(config.getOrigenDatos())) {
+            portalRepository.recargar(config.getRutaArchivo());
+            return portalRepository.getClientes();
         }
 
         return clienteController.obtenerTodosClientes();
     }
 
     public List<Valvula> obtenerValvulasPorCliente(int clienteId) throws ArchivoNoEncontradoException {
+        Configuracion config = configuracionDAO.obtenerConfiguracion();
 
-        Configuracion config =
-                configuracionDAO.obtenerConfiguracion();
-
-        if ("TXT".equalsIgnoreCase(config.getOrigenDatos())) {
-
-            PortalRepository repository = PortalRepository.getInstancia();
-
-            repository.recargar(config.getRutaArchivo());
-
-            return repository.getValvulasPorCliente(clienteId);
+        if (config != null && "TXT".equalsIgnoreCase(config.getOrigenDatos())) {
+            portalRepository.recargar(config.getRutaArchivo());
+            return portalRepository.getValvulasPorCliente(clienteId);
         }
 
         return valvulaGestor.obtenerValvulasPorCliente(clienteId);
@@ -152,7 +138,6 @@ public class RealTimeGraphDAO {
         } catch (Exception e) {
             System.err.println("Error al cargar válvulas: " + e.getMessage());
 
-            // ✅ CORRECCIÓN: Crear objeto Valvula de forma correcta
             Valvula errorValvula = new Valvula();
             errorValvula.setId(0);
             errorValvula.setTag("Error de carga");
@@ -204,22 +189,35 @@ public class RealTimeGraphDAO {
         });
     }
 
+    public void cargarComboBoxTiposValvula(JComboBox<TipoValvula> cmbTipoValvula) throws Exception {
+        if (cmbTipoValvula == null) return;
+
+        cmbTipoValvula.removeAllItems();
+        cmbTipoValvula.addItem(new TipoValvula(0, "Todos los tipos"));
+
+        Configuracion config = configuracionDAO.obtenerConfiguracion();
+
+        if (config != null && "TXT".equalsIgnoreCase(config.getOrigenDatos())) {
+            List<TipoValvula> tiposTXT = portalRepository.getTiposValvula();
+            for (TipoValvula tv : tiposTXT) {
+                cmbTipoValvula.addItem(tv);
+            }
+        } else {
+            List<TipoValvula> tiposBD = new TipoValvulaDAO().getAll();
+            for (TipoValvula tv : tiposBD) {
+                cmbTipoValvula.addItem(tv);
+            }
+        }
+    }
+
     public void recargarPortal() throws ArchivoNoEncontradoException {
-
-        Configuracion configuracion =
-                configuracionDAO.obtenerConfiguracion();
-
+        Configuracion configuracion = configuracionDAO.obtenerConfiguracion();
         if (configuracion == null) {
             return;
         }
-
         if (!"TXT".equalsIgnoreCase(configuracion.getOrigenDatos())) {
             return;
         }
-
-        portalRepository.recargar(
-                configuracion.getRutaArchivo()
-        );
-
+        portalRepository.recargar(configuracion.getRutaArchivo());
     }
 }

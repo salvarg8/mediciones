@@ -1,13 +1,7 @@
 package com.mediciones.view;
 
-import com.mediciones.gestor.ClienteGestor;
-import com.mediciones.gestor.FluidoGestor;
-import com.mediciones.gestor.PlantaGestor;
-import com.mediciones.gestor.ValvulaGestor;
-import com.mediciones.model.Planta;
-import com.mediciones.model.Valvula;
-import com.mediciones.model.Cliente;
-import com.mediciones.model.Fluido;
+import com.mediciones.gestor.*;
+import com.mediciones.model.*;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +36,10 @@ public class FrmValvulasCRUD extends JFrame {
     private JLabel lblSalidaBridaDiametro;
     private JLabel lblSalidaBridaSerie;
     private JLabel lblBusquedaCliente;
+    private JLabel lblTipoValvula;
 
-    // Componentes de entrada
+
+    private JComboBox<TipoValvula> cboTipoValvula;
     private JComboBox<Cliente> cboCliente;
     private JComboBox<Planta> cboPlanta; // NUEVO
     private JComboBox<Fluido> cboFluidoServicio;
@@ -60,24 +56,21 @@ public class FrmValvulasCRUD extends JFrame {
     private JTextField txtSalidaBridaDiametro;
     private JTextField txtSalidaBridaSerie;
 
-    // Botones
     private Button3D btnGuardar;
     private Button3D btnSalir;
     private Button3D btnEditarSeleccionado;
     private Button3D btnEliminarSeleccionado;
 
-    // Tabla y modelo
     private JTable tblValvulas;
     private DefaultTableModel tableModel;
 
-    // Controladores y entidad seleccionada
     private final ValvulaGestor gestor;
+    private final TipoValvulaGestor tipoValvulaGestor;
     private final ClienteGestor clienteGestor;
     private final FluidoGestor fluidoGestor;
     private final PlantaGestor plantaGestor; // NUEVO
     private Valvula valvulaSeleccionada;
 
-    // Paneles principales
     private JPanel topPanel;
     private JPanel camposGeneralesPanel;
     private JPanel entradaPanel;
@@ -90,22 +83,22 @@ public class FrmValvulasCRUD extends JFrame {
      */
     public FrmValvulasCRUD() {
         super("Gestión de Válvulas");
-
         this.gestor = new ValvulaGestor();
         this.clienteGestor = new ClienteGestor();
         this.fluidoGestor = new FluidoGestor();
-        this.plantaGestor = new PlantaGestor(); // Inicializamos el gestor de plantas
+        this.plantaGestor = new PlantaGestor();
+        this.tipoValvulaGestor = new TipoValvulaGestor();
 
         setResizable(true);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setMinimumSize(new Dimension(800, 600));
 
-        // Maximizar la ventana al iniciar
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         initComponents();
         cargarClientesYFluidos();
         cargarValvulas();
+        cargarTiposValvula();
 
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -115,13 +108,11 @@ public class FrmValvulasCRUD extends JFrame {
         setLayout(new BorderLayout(10, 10));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        // --- Panel Superior: Datos de la Válvula ---
         topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBorder(BorderFactory.createTitledBorder("Datos de la Válvula"));
         topPanel.setPreferredSize(new Dimension(1200, 300));
 
-        // Fila 1: Cliente, Planta y Fluido de servicio
         JPanel clienteFluidoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         lblCliente = new JLabel("Cliente:");
@@ -139,9 +130,13 @@ public class FrmValvulasCRUD extends JFrame {
         clienteFluidoPanel.add(lblFluidoServicio);
         clienteFluidoPanel.add(cboFluidoServicio);
 
+        lblTipoValvula = new JLabel("Tipo de Válvula:");
+        cboTipoValvula = new JComboBox<>();
+        clienteFluidoPanel.add(lblTipoValvula);
+        clienteFluidoPanel.add(cboTipoValvula);
+
         topPanel.add(clienteFluidoPanel);
 
-        // Listener para cargar las plantas cuando se elige un cliente
         cboCliente.addActionListener(e -> {
             cboPlanta.removeAllItems(); // Limpiamos el combo de plantas
             Cliente clienteSeleccionado = (Cliente) cboCliente.getSelectedItem();
@@ -158,7 +153,6 @@ public class FrmValvulasCRUD extends JFrame {
             }
         });
 
-        // Paneles de entrada de texto
         camposGeneralesPanel = createInputPanel("Campos Generales",
                 new String[]{"TAG:", "N° de serie:", "Lugar de conexión:", "Marca:", "Material del cuerpo:"},
                 new JTextField[]{txtTag = new JTextField(), txtNroSerie = new JTextField(), txtLugarConexion = new JTextField(),
@@ -182,7 +176,6 @@ public class FrmValvulasCRUD extends JFrame {
 
         add(topPanel, BorderLayout.NORTH);
 
-        // --- Panel Central: Búsqueda y Tabla ---
         JPanel centerPanel = new JPanel(new BorderLayout(5, 5));
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -210,7 +203,6 @@ public class FrmValvulasCRUD extends JFrame {
         centerPanel.add(scrollPane, BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- Panel Inferior: Botones ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         btnGuardar = new Button3D("Guardar nueva", new Color(200, 255, 200));
         btnGuardar.setPreferredSize(new Dimension(200, 40));
@@ -227,7 +219,6 @@ public class FrmValvulasCRUD extends JFrame {
         buttonPanel.add(btnSalir);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        // --- Listeners de botones ---
         btnGuardar.addActionListener(this::btnGuardarActionPerformed);
         btnSalir.addActionListener(e -> limpiarFormularioYCerrar());
         btnEditarSeleccionado.addActionListener(this::btnEditarSeleccionadoActionPerformed);
@@ -263,10 +254,6 @@ public class FrmValvulasCRUD extends JFrame {
         }
         return panel;
     }
-
-    // --------------------------------------------------------------------
-    // MÉTODOS DE SOPORTE Y LÓGICA DE LA VISTA
-    // --------------------------------------------------------------------
 
     private void limpiarFormulario() {
         cboCliente.setSelectedIndex(-1);
@@ -364,6 +351,8 @@ public class FrmValvulasCRUD extends JFrame {
         String tag = txtTag.getText().trim();
         String nroSerie = txtNroSerie.getText().trim();
         String lugarConexion = txtLugarConexion.getText().trim();
+        TipoValvula tipo = (TipoValvula) cboTipoValvula.getSelectedItem();
+
 
         if (cliente == null) {
             JOptionPane.showMessageDialog(this, "Debe seleccionar un Cliente.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
@@ -379,6 +368,10 @@ public class FrmValvulasCRUD extends JFrame {
         }
         if (tag.isEmpty() || lugarConexion.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Los campos TAG y Lugar de conexión son obligatorios.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (tipo == null) {
+            JOptionPane.showMessageDialog(this, "Debe seleccionar un Tipo de Válvula.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -398,6 +391,7 @@ public class FrmValvulasCRUD extends JFrame {
         valvulaAGuardar.setSalidaRoscaTipo(txtSalidaRoscaTipo.getText().trim());
         valvulaAGuardar.setSalidaBridaDiametro(txtSalidaBridaDiametro.getText().trim());
         valvulaAGuardar.setSalidaBridaSerie(txtSalidaBridaSerie.getText().trim());
+        valvulaAGuardar.setTipoValvula(tipo);
 
         try {
             if (valvulaSeleccionada == null && gestor.existeValvulaDuplicada(cliente.getId(), tag, lugarConexion)) {
@@ -434,6 +428,9 @@ public class FrmValvulasCRUD extends JFrame {
                     }
                     if (valvula.getFluido() != null) {
                         seleccionarFluidoEnCombo(valvula.getFluido().getId());
+                    }
+                    if (valvula.getTipoValvula() != null) {
+                        seleccionarTipoValvulaEnCombo(valvula.getTipoValvula().getId());
                     }
 
                     txtTag.setText(valvula.getTag());
@@ -478,12 +475,19 @@ public class FrmValvulasCRUD extends JFrame {
         }
     }
 
-    // --- Métodos de Selección Segura ---
-
     private void seleccionarClienteEnCombo(int idCliente) {
         for (int i = 0; i < cboCliente.getItemCount(); i++) {
             if (cboCliente.getItemAt(i).getId() == idCliente) {
                 cboCliente.setSelectedIndex(i);
+                return;
+            }
+        }
+    }
+
+    private void seleccionarTipoValvulaEnCombo(int idTipoValvula) {
+        for (int i = 0; i < cboTipoValvula.getItemCount(); i++) {
+            if (cboTipoValvula.getItemAt(i).getId() == idTipoValvula) {
+                cboTipoValvula.setSelectedIndex(i);
                 return;
             }
         }
@@ -495,6 +499,18 @@ public class FrmValvulasCRUD extends JFrame {
                 cboPlanta.setSelectedIndex(i);
                 return;
             }
+        }
+    }
+
+    private void cargarTiposValvula() {
+        try {
+            List<TipoValvula> tipos = tipoValvulaGestor.getAll();
+            cboTipoValvula.removeAllItems();
+            for (TipoValvula tipo : tipos) {
+                cboTipoValvula.addItem(tipo);
+            }
+        } catch (Exception ex) {
+            logger.error("Error al cargar tipos de válvula:", ex);
         }
     }
 

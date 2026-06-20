@@ -3,6 +3,7 @@ package com.mediciones.repository;
 import com.mediciones.model.Cliente;
 import com.mediciones.model.Fluido;
 import com.mediciones.model.Planta;
+import com.mediciones.model.TipoValvula;
 import com.mediciones.model.Valvula;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,13 +17,14 @@ public class PortalRepository {
 
     private List<Cliente> clientes;
     private List<Valvula> valvulas;
-    private List<Planta> plantas; // Lista general de plantas
+    private List<Planta> plantas;
+    private List<TipoValvula> tiposValvula; // <-- NUEVO: Lista permanente de tipos
 
     private Map<Integer, Cliente> clientesPorId;
-    private Map<Integer, Planta> plantasPorId; // Clave cambiada a Integer nativo
+    private Map<Integer, Planta> plantasPorId;
     private Map<Integer, Valvula> valvulasPorId;
     private Map<Integer, List<Planta>> plantasPorCliente;
-    private Map<Integer, List<Valvula>> valvulasPorPlanta; // Clave cambiada a Integer nativo
+    private Map<Integer, List<Valvula>> valvulasPorPlanta;
     private Map<Integer, List<Valvula>> valvulasPorCliente;
 
     private static final Logger logger = LoggerFactory.getLogger(PortalRepository.class);
@@ -38,6 +40,7 @@ public class PortalRepository {
         this.clientes = new ArrayList<>();
         this.valvulas = new ArrayList<>();
         this.plantas = new ArrayList<>();
+        this.tiposValvula = new ArrayList<>(); // <-- Inicialización
 
         this.clientesPorId = new HashMap<>();
         this.valvulasPorId = new HashMap<>();
@@ -73,9 +76,13 @@ public class PortalRepository {
         return resultado;
     }
 
-    // Getter útil para obtener las Plantas asociadas a un Cliente
     public List<Planta> getPlantasPorCliente(int idCliente) {
         return plantasPorCliente.getOrDefault(idCliente, new ArrayList<>());
+    }
+
+    // <-- NUEVO: Simplemente retorna la lista ya calculada
+    public List<TipoValvula> getTiposValvula() {
+        return new ArrayList<>(this.tiposValvula);
     }
 
     public void recargar(String rutaArchivo) throws ArchivoNoEncontradoException {
@@ -102,12 +109,16 @@ public class PortalRepository {
         Map<Integer, List<Planta>> nuevasPlantasPorCliente = new HashMap<>();
         Map<Integer, List<Valvula>> nuevasValvulasPorPlanta = new HashMap<>();
 
+        // <-- NUEVO: Mapa temporal para guardar los Tipos de Válvula que vayamos encontrando
+        Map<String, TipoValvula> nuevosTiposMap = new HashMap<>();
+
         // --- VARIABLES DE CONTROL DE FLUJO ---
         Cliente clienteActual = null;
         Planta plantaActualObj = null;
-        String plantaActualStr = "N/A"; // Mantiene el nombre string para pasarlo al parseValvula original
+        String plantaActualStr = "N/A";
         int idValvula = 1;
-        int idPlanta = 1; // Cambiado a int (Integer) para autoincrementar
+        int idPlanta = 1;
+        int[] idFicticioTipo = {-1}; // <-- NUEVO: Usamos un array para poder pasarlo por referencia al parseValvula
 
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new FileInputStream(archivo), "Windows-1252"))) {
@@ -126,7 +137,6 @@ public class PortalRepository {
                         if (clienteActual != null) {
                             nuevosClientes.add(clienteActual);
                             nuevosClientesPorId.put(clienteActual.getId(), clienteActual);
-                            // Reseteamos el contexto de planta al cambiar de cliente
                             plantaActualObj = null;
                             plantaActualStr = "N/A";
                         }
@@ -137,14 +147,12 @@ public class PortalRepository {
                         if (!detallePlanta.isEmpty() && clienteActual != null) {
                             plantaActualStr = detallePlanta;
 
-                            // Instanciar el objeto Planta usando Integer
                             plantaActualObj = new Planta();
-                            plantaActualObj.setId(idPlanta++); // Asigna e incrementa el primitivo de forma transparente
+                            plantaActualObj.setId(idPlanta++);
                             plantaActualObj.setNombre(plantaActualStr);
                             plantaActualObj.setCliente(clienteActual);
                             plantaActualObj.setValvulas(new ArrayList<>());
 
-                            // Almacenar en colecciones temporales de manera directa con la clave id (Integer)
                             nuevasPlantas.add(plantaActualObj);
                             nuevasPlantasPorId.put(plantaActualObj.getId(), plantaActualObj);
 
@@ -159,7 +167,9 @@ public class PortalRepository {
                         if (clienteActual == null) {
                             continue;
                         }
-                        Valvula valvula = parseValvula(linea, clienteActual, idValvula++, plantaActualStr);
+
+                        // <-- CAMBIO: Le pasamos el mapa y el contador ficticio al parser
+                        Valvula valvula = parseValvula(linea, clienteActual, idValvula++, plantaActualStr, nuevosTiposMap, idFicticioTipo);
                         if (valvula != null) {
 
                             nuevasValvulas.add(valvula);
@@ -168,7 +178,6 @@ public class PortalRepository {
                                     .computeIfAbsent(clienteActual.getId(), k -> new ArrayList<>())
                                     .add(valvula);
 
-                            // Si hay una planta actual en contexto, vinculamos la válvula de forma bidireccional
                             if (plantaActualObj != null) {
                                 plantaActualObj.getValvulas().add(valvula);
                                 nuevasValvulasPorPlanta
@@ -179,7 +188,6 @@ public class PortalRepository {
                         break;
 
                     default:
-                        // Registro desconocido o no soportado. Se ignora.
                         break;
                 }
             }
@@ -188,10 +196,15 @@ public class PortalRepository {
             return;
         }
 
+        // <-- NUEVO: Convertimos los Tipos de Válvula encontrados a una lista y los ordenamos alfabéticamente
+        List<TipoValvula> nuevosTiposValvula = new ArrayList<>(nuevosTiposMap.values());
+        nuevosTiposValvula.sort(Comparator.comparing(TipoValvula::getNombre, String.CASE_INSENSITIVE_ORDER));
+
         // Reemplazo atómico de los estados del repositorio
         this.clientes = nuevosClientes;
         this.valvulas = nuevasValvulas;
         this.plantas = nuevasPlantas;
+        this.tiposValvula = nuevosTiposValvula; // <-- NUEVO: Asignación final atómica
 
         this.clientesPorId = nuevosClientesPorId;
         this.valvulasPorId = nuevasValvulasPorId;
@@ -256,7 +269,8 @@ public class PortalRepository {
         }
     }
 
-    private Valvula parseValvula(String linea, Cliente cliente, int idValvula, String lugarConexion) {
+    // <-- CAMBIO: Se añadió `mapaTipos` y `idFicticio` a la firma del método
+    private Valvula parseValvula(String linea, Cliente cliente, int idValvula, String lugarConexion, Map<String, TipoValvula> mapaTipos, int[] idFicticio) {
         if (linea == null || linea.trim().isEmpty()) {
             return null;
         }
@@ -266,7 +280,7 @@ public class PortalRepository {
             valvula.setCliente(cliente);
             valvula.setLugarConexion(lugarConexion);
 
-            String tag = safeSubstring(linea, 286, 306);
+            String tag = safeSubstring(linea, 286, 305);
             valvula.setTag(tag);
 
             String detalleRaw = safeSubstring(linea, 9, 159).trim();
@@ -275,7 +289,7 @@ public class PortalRepository {
             String marca = "S/D";
             String material = "";
             String serie = "";
-            String servicio = "Válvula";
+            String tipoValvulaStr = "Válvula";
             String conexionesSobrantes = "";
 
             java.util.regex.Matcher mSerie = java.util.regex.Pattern.compile("\\((.*?)\\)").matcher(detalle);
@@ -293,7 +307,7 @@ public class PortalRepository {
             String[] fragmentos = detalle.split("-");
 
             if (fragmentos.length >= 2) {
-                servicio = fragmentos[0].trim();
+                tipoValvulaStr = fragmentos[0].trim();
                 marca = fragmentos[1].trim();
 
                 for (int i = 2; i < fragmentos.length; i++) {
@@ -313,8 +327,27 @@ public class PortalRepository {
             valvula.setMaterialCuerpo(material);
             valvula.setNumeroSerie(serie);
 
+            // --- NUEVA LÓGICA DE MAPEO PARA EL TIPO DE VÁLVULA ---
+            // Usamos mayúsculas como clave única para no tener duplicados por diferencias de tipeo.
+            String keyTipo = tipoValvulaStr.toUpperCase();
+            TipoValvula tipoV = mapaTipos.get(keyTipo);
+
+            if (tipoV == null) {
+                // Si el Tipo de Válvula no existe aún en el mapa, lo creamos.
+                tipoV = new TipoValvula();
+                // Usamos el idFicticio actual (ej. -1), y luego lo decrementamos (ej. pasa a -2)
+                tipoV.setId(idFicticio[0]--);
+                tipoV.setNombre(tipoValvulaStr);
+                mapaTipos.put(keyTipo, tipoV);
+            }
+
+            // Le asignamos a la Válvula el TipoValvula recién creado o el existente del mapa
+            valvula.setTipoValvula(tipoV);
+            // -----------------------------------------------------
+
+            // Fluido por defecto
             Fluido fluido = new Fluido();
-            fluido.setNombre(servicio);
+            fluido.setNombre("No especificado");
             valvula.setFluido(fluido);
 
             String despuesParentesis = conexionesSobrantes.trim();

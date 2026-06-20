@@ -5,7 +5,8 @@ import com.mediciones.gestor.RealTimeGraphGestor;
 import com.mediciones.model.Cliente;
 import com.mediciones.model.Fluido;
 import com.mediciones.model.Operador;
-import com.mediciones.model.Planta; // NUEVO: Importamos la clase Planta
+import com.mediciones.model.Planta;
+import com.mediciones.model.TipoValvula; // NUEVO: Importamos TipoValvula
 import com.mediciones.model.Valvula;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
@@ -37,7 +38,8 @@ public class RealTimeGraph extends JFrame {
     private JComboBox<Integer> baudCombo;
     private Button3D startStopButton, generateReportButton, returnButton;
     private JComboBox<Cliente> cmbCliente;
-    private JComboBox<Planta> cmbPlanta; // NUEVO: Combo de Planta
+    private JComboBox<Planta> cmbPlanta;
+    private JComboBox<TipoValvula> cmbTipoValvula; // NUEVO: Combo de Tipo de Válvula
     private JComboBox<Valvula> cmbValvula;
     private JComboBox<Operador> cmbOperador;
     private JComboBox<Fluido> cmbFluido;
@@ -65,7 +67,8 @@ public class RealTimeGraph extends JFrame {
         setLayout(new BorderLayout(10, 10));
 
         initComponents();
-        gestor.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido);
+        // NUEVO: Agregamos cmbTipoValvula al inicializador del gestor
+        gestor.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido, cmbTipoValvula);
         gestor.init();
 
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -106,7 +109,8 @@ public class RealTimeGraph extends JFrame {
             ((TitledBorder) northPanel.getBorder()).setTitleFont(scaledFont);
         }
         cmbCliente.setFont(comboBoxFont);
-        if (cmbPlanta != null) cmbPlanta.setFont(comboBoxFont); // NUEVO: Ajuste de fuente
+        if (cmbPlanta != null) cmbPlanta.setFont(comboBoxFont);
+        if (cmbTipoValvula != null) cmbTipoValvula.setFont(comboBoxFont); // NUEVO
         cmbValvula.setFont(comboBoxFont);
         cmbOperador.setFont(comboBoxFont);
         cmbFluido.setFont(comboBoxFont);
@@ -160,7 +164,6 @@ public class RealTimeGraph extends JFrame {
 
         JPanel northCenterPanel = new JPanel(new BorderLayout(10, 10));
 
-        // NUEVO: Cambiamos GridLayout a 3 filas y 2 columnas para acomodar la Planta
         JPanel valvulaSeleccionadaPanel = new JPanel(new GridLayout(2, 3, 5, 5));
         valvulaSeleccionadaPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(Color.GRAY, 1), "Válvula Seleccionada",
@@ -172,12 +175,18 @@ public class RealTimeGraph extends JFrame {
         clientePanel.add(cmbCliente, BorderLayout.CENTER);
         valvulaSeleccionadaPanel.add(clientePanel);
 
-        // NUEVO: Panel de Planta
         JPanel plantaPanel = new JPanel(new BorderLayout(5, 0));
         plantaPanel.add(new JLabel("Planta:"), BorderLayout.WEST);
         cmbPlanta = new JComboBox<>();
         plantaPanel.add(cmbPlanta, BorderLayout.CENTER);
         valvulaSeleccionadaPanel.add(plantaPanel);
+
+        // NUEVO: Panel de Tipo de Válvula reemplaza el espacio vacío
+        JPanel tipoValvulaPanel = new JPanel(new BorderLayout(5, 0));
+        tipoValvulaPanel.add(new JLabel("Tipo Válvula:"), BorderLayout.WEST);
+        cmbTipoValvula = new JComboBox<>();
+        tipoValvulaPanel.add(cmbTipoValvula, BorderLayout.CENTER);
+        valvulaSeleccionadaPanel.add(tipoValvulaPanel);
 
         JPanel valvulaPanel = new JPanel(new BorderLayout(5, 0));
         valvulaPanel.add(new JLabel("Válvula (TAG):"), BorderLayout.WEST);
@@ -196,9 +205,6 @@ public class RealTimeGraph extends JFrame {
         cmbFluido = new JComboBox<>();
         fluidoPanel.add(cmbFluido, BorderLayout.CENTER);
         valvulaSeleccionadaPanel.add(fluidoPanel);
-
-        // NUEVO: Panel vacío para completar el espacio restante en el GridLayout(3,2)
-        valvulaSeleccionadaPanel.add(new JLabel());
 
         northCenterPanel.add(valvulaSeleccionadaPanel, BorderLayout.NORTH);
 
@@ -354,26 +360,35 @@ public class RealTimeGraph extends JFrame {
     }
 
     private void setupListeners() {
-        // NUEVO: El listener de Cliente ahora carga las Plantas
+        // 1. Al cambiar Cliente -> Cargamos Plantas
         cmbCliente.addActionListener(e -> {
             Object selected = cmbCliente.getSelectedItem();
             if (selected instanceof Cliente) {
                 gestor.updatePlantas(cmbPlanta, (Cliente) selected);
             } else {
                 cmbPlanta.removeAllItems();
+                if (cmbTipoValvula != null) cmbTipoValvula.removeAllItems();
                 cmbValvula.removeAllItems();
             }
         });
 
-        // NUEVO: Agregamos el listener de Planta para cargar las Válvulas
+        // 2. Al cambiar Planta -> Cargamos Tipos presentes en ESA planta
         cmbPlanta.addActionListener(e -> {
             Object selected = cmbPlanta.getSelectedItem();
             if (selected instanceof Planta) {
-                gestor.updateValvulasPorPlanta(cmbValvula, (Planta) selected);
+                gestor.updateTiposValvulaPorPlanta(cmbTipoValvula, (Planta) selected);
             } else {
+                if (cmbTipoValvula != null) cmbTipoValvula.removeAllItems();
                 cmbValvula.removeAllItems();
             }
         });
+
+        // 3. Al cambiar Tipo de Válvula -> Filtramos Válvulas finales
+        if (cmbTipoValvula != null) {
+            cmbTipoValvula.addActionListener(e -> filtrarValvulas());
+        }
+
+        // ... El resto de tus botones (startStopButton, btnSalir, etc.) quedan exactamente igual ...
 
         startStopButton.addActionListener(e -> {
             if (!gestor.isRunning()) {
@@ -381,10 +396,7 @@ public class RealTimeGraph extends JFrame {
                 try {
                     pressure = Double.parseDouble(pressureRequestedField.getText().trim());
                 } catch(Exception ignored){}
-                // Metodo simula mediciones.
                 gestor.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
-                // Captura de datos correcta.
-                //controller.startDataCapture(portCombo, baudCombo, (Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
             }
@@ -400,6 +412,22 @@ public class RealTimeGraph extends JFrame {
         btnRecargarPortal.addActionListener(e -> gestor.recargarPortal());
 
         returnButton.addActionListener(e -> gestor.discardData());
+    }
+
+    // NUEVO: Método que envía al gestor tanto la planta como el tipo para que filtre
+    private void filtrarValvulas() {
+        Object selectedPlanta = cmbPlanta.getSelectedItem();
+        Object selectedTipo = cmbTipoValvula.getSelectedItem();
+
+        if (selectedPlanta instanceof Planta) {
+            TipoValvula tipoFiltro = null;
+            if (selectedTipo instanceof TipoValvula && ((TipoValvula) selectedTipo).getId() != 0) {
+                tipoFiltro = (TipoValvula) selectedTipo;
+            }
+            gestor.updateValvulasFiltradas(cmbValvula, (Planta) selectedPlanta, tipoFiltro);
+        } else {
+            cmbValvula.removeAllItems();
+        }
     }
 
     public void setLedColor(Color color) {
@@ -431,7 +459,8 @@ public class RealTimeGraph extends JFrame {
 
     public void setInfoFieldsEnabled(boolean enabled) {
         cmbCliente.setEnabled(enabled);
-        cmbPlanta.setEnabled(enabled); // NUEVO: También habilitamos/deshabilitamos la Planta
+        cmbPlanta.setEnabled(enabled);
+        if (cmbTipoValvula != null) cmbTipoValvula.setEnabled(enabled); // NUEVO
         cmbValvula.setEnabled(enabled);
         cmbOperador.setEnabled(enabled);
         cmbFluido.setEnabled(enabled);
