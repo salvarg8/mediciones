@@ -1,7 +1,9 @@
 package com.mediciones.view;
 
 import com.mediciones.gestor.ConfiguracionGestor;
+import com.mediciones.gestor.UbicacionGestor;
 import com.mediciones.model.Configuracion;
+import com.mediciones.model.Ubicacion;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,8 @@ public class FrmConfiguracion extends JFrame {
     private Button3D btnCancelar;
 
     // Controller
-    private final ConfiguracionGestor controller;
+    private final ConfiguracionGestor configuracionGestor;
+    private final UbicacionGestor ubicacionGestor;
 
     private static final Logger logger = LoggerFactory.getLogger(FrmConfiguracion.class);
 
@@ -42,7 +45,8 @@ public class FrmConfiguracion extends JFrame {
 
         super("Configuración");
 
-        controller = new ConfiguracionGestor();
+        configuracionGestor = new ConfiguracionGestor();
+        ubicacionGestor = new UbicacionGestor();
 
         // Evitar que la ventana se cierre automáticamente al darle a la 'X'
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -195,6 +199,7 @@ public class FrmConfiguracion extends JFrame {
         rbArchivoTxt.addActionListener(e -> actualizarEstadoControles());
 
         btnBuscar.addActionListener(this::buscarArchivo);
+        btnBuscarReportes.addActionListener(this::buscarCarpetaReportes); // <-- NUEVO EVENTO
         btnGuardar.addActionListener(this::guardarConfiguracion);
 
         // El botón cancelar ahora llama a la validación en lugar de hacer dispose() directo
@@ -205,7 +210,7 @@ public class FrmConfiguracion extends JFrame {
      * Valida si existe una configuración antes de permitir cerrar el formulario.
      */
     private void intentarCerrar() {
-        if (!controller.existeConfiguracion()) {
+        if (!configuracionGestor.existeConfiguracion()) {
             JOptionPane.showMessageDialog(
                     this,
                     "Debe guardar una configuración inicial antes de salir del formulario.",
@@ -221,7 +226,7 @@ public class FrmConfiguracion extends JFrame {
 
         try {
 
-            Configuracion configuracion = controller.obtenerConfiguracion();
+            Configuracion configuracion = configuracionGestor.obtenerConfiguracion();
 
             if (configuracion == null) {
                 rbBaseDatos.setSelected(true);
@@ -238,6 +243,12 @@ public class FrmConfiguracion extends JFrame {
                                 ? configuracion.getRutaArchivo()
                                 : ""
                 );
+            }
+            Ubicacion ubi = ubicacionGestor.obtenerUbicacion();
+            if (ubi != null && ubi.getUbicacion() != null) {
+                txtRutaReportes.setText(ubi.getUbicacion());
+            } else {
+                txtRutaReportes.setText("");
             }
 
             actualizarEstadoControles();
@@ -257,6 +268,7 @@ public class FrmConfiguracion extends JFrame {
 
         String origen;
         String ruta = txtRutaArchivo.getText().trim();
+        String rutaReportes = txtRutaReportes.getText().trim(); // <-- NUEVO
 
         if (rbBaseDatos.isSelected()) {
             origen = "BD";
@@ -300,13 +312,13 @@ public class FrmConfiguracion extends JFrame {
         configuracion.setId(1);
         configuracion.setOrigenDatos(origen);
         configuracion.setRutaArchivo(ruta);
+        boolean okConfig = configuracionGestor.guardarConfiguracion(configuracion);
 
-        boolean ok = controller.guardarConfiguracion(configuracion);
-
-        if (ok) {
+        boolean okUbi = ubicacionGestor.guardarUbicacion(rutaReportes);
+        if (okConfig && okUbi) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Configuración guardada correctamente.",
+                    "Configuración y Ubicación guardadas correctamente.",
                     "Información",
                     JOptionPane.INFORMATION_MESSAGE
             );
@@ -314,7 +326,7 @@ public class FrmConfiguracion extends JFrame {
         } else {
             JOptionPane.showMessageDialog(
                     this,
-                    "No fue posible guardar la configuración.",
+                    "Hubo un problema al guardar la configuración.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE
             );
@@ -355,6 +367,36 @@ public class FrmConfiguracion extends JFrame {
         if (resultado == JFileChooser.APPROVE_OPTION) {
             File archivoSeleccionado = fileChooser.getSelectedFile();
             txtRutaArchivo.setText(archivoSeleccionado.getAbsolutePath());
+        }
+    }
+
+    private void buscarCarpetaReportes(ActionEvent e) {
+        JFileChooser fileChooser;
+
+        // Si ya hay una ruta cargada, abrir en esa carpeta
+        String rutaActual = txtRutaReportes.getText().trim();
+
+        if (!rutaActual.isEmpty()) {
+            File carpetaActual = new File(rutaActual);
+            // Validamos que exista y que realmente sea un directorio
+            if (carpetaActual.exists() && carpetaActual.isDirectory()) {
+                fileChooser = new JFileChooser(carpetaActual);
+            } else {
+                fileChooser = new JFileChooser();
+            }
+        } else {
+            fileChooser = new JFileChooser();
+        }
+
+        fileChooser.setDialogTitle("Seleccionar carpeta para Reportes");
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+
+        int resultado = fileChooser.showOpenDialog(this);
+
+        if (resultado == JFileChooser.APPROVE_OPTION) {
+            File carpetaSeleccionada = fileChooser.getSelectedFile();
+            txtRutaReportes.setText(carpetaSeleccionada.getAbsolutePath());
         }
     }
 
