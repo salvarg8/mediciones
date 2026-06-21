@@ -93,21 +93,65 @@ public class PlantaDAO {
     }
 
     public boolean deletePlantaById(int idPlanta) {
-        // Borrado lógico: Actualizamos el estado 'active' a false en lugar de borrar el registro
-        String sql = "UPDATE plantas SET active = false WHERE id = ?";
+        String sqlPlanta = "UPDATE plantas SET active = false WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        // Instanciamos el DAO de válvulas para delegarle su responsabilidad
+        ValvulaDAO valvulaDAO = new ValvulaDAO();
 
-            ps.setInt(1, idPlanta);
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false); // Iniciamos la transacción de forma explícita
 
-            int affectedRows = ps.executeUpdate();
-            return affectedRows > 0; // Retorna true si se actualizó al menos una fila exitosamente
+            try {
+                // 1. Delegamos a ValvulaDAO el borrado lógico de las válvulas de esta planta
+                valvulaDAO.eliminarPorPlanta(idPlanta, conn);
+
+                // 2. PlantaDAO se ocupa única y exclusivamente de la tabla plantas
+                try (PreparedStatement ps = conn.prepareStatement(sqlPlanta)) {
+                    ps.setInt(1, idPlanta);
+                    int affectedRows = ps.executeUpdate();
+
+                    conn.commit(); // Si todo salió bien, confirmamos ambos cambios
+                    return affectedRows > 0;
+                }
+
+            } catch (SQLException e) {
+                conn.rollback(); // Si falla el borrado de válvulas o de la planta, se deshace TODO
+                logger.error("Error en transacción al realizar el borrado lógico de la planta con ID: " + idPlanta, e);
+                return false;
+            }
 
         } catch (SQLException e) {
-            logger.error("Error al realizar el borrado lógico de la planta con ID: " + idPlanta, e);
+            logger.error("Error de conexión al intentar borrar planta ID: " + idPlanta, e);
             return false;
         }
+    }
+
+
+    /**
+     * Elimina (borrado lógico) todas las plantas asociadas a un cliente.
+     * Utiliza una conexión externa para participar en una transacción.
+     */
+    public void eliminarPorCliente(int idCliente, Connection conn) throws SQLException {
+        String sql = "UPDATE plantas SET active = false WHERE cliente_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, idCliente);
+            pstmt.executeUpdate();
+        }
+    }
+
+    // Cuenta cuántas plantas activas tiene un cliente
+    public int contarPorCliente(int idCliente) {
+        String sql = "SELECT COUNT(*) FROM plantas WHERE cliente_id = ? AND active = true";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idCliente);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Error al contar plantas del cliente ID: " + idCliente, e);
+        }
+        return 0;
     }
 
     public Planta getPlantaById(int idPlanta) {

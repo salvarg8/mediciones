@@ -78,7 +78,7 @@ public class ValvulaDAO {
 
 
     public boolean actualizar(Valvula valvula) {
-        String sql = "UPDATE valvulas SET cliente_id = ?, planta_id = ?, fluido_servicio_id = ?,, tipo_valvula_id = ?, tag = ?, " +
+        String sql = "UPDATE valvulas SET cliente_id = ?, planta_id = ?, fluido_servicio_id = ?, tipo_valvula_id = ?, tag = ?, " +
                 "numero_serie = ?, lugar_conexion = ?, marca = ?, material_cuerpo = ?, entrada_rosca_tipo = ?, " +
                 "entrada_brida_diametro = ?, entrada_brida_serie = ?, salida_rosca_tipo = ?, " +
                 "salida_brida_diametro = ?, salida_brida_serie = ? WHERE id = ? AND active = true";
@@ -293,6 +293,59 @@ public class ValvulaDAO {
         valvula.setSalidaBridaSerie(rs.getString("salida_brida_serie"));
 
         return valvula;
+    }
+
+    /**
+     * Elimina (borrado lógico) todas las válvulas asociadas a un cliente.
+     * Utiliza una conexión externa para participar en una transacción.
+     */
+    public void eliminarPorCliente(int idCliente, Connection conn) throws SQLException {
+        String sql = "UPDATE valvulas SET active = false WHERE cliente_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, idCliente);
+            pstmt.executeUpdate();
+        }
+    }
+    /**
+     * Elimina (borrado lógico) todas las válvulas asociadas a una planta específica.
+     * Utiliza una conexión externa compartida para mantener la integridad de la transacción.
+     */
+    public void eliminarPorPlanta(int idPlanta, Connection conn) throws SQLException {
+        String sql = "UPDATE valvulas SET active = false WHERE planta_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, idPlanta);
+            pstmt.executeUpdate();
+        }
+    }
+
+    // Cuenta cuántas válvulas activas tiene una planta
+    public int contarPorPlanta(int idPlanta) {
+        String sql = "SELECT COUNT(*) FROM valvulas WHERE planta_id = ? AND active = true";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idPlanta);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al contar válvulas por planta: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // Cuenta cuántas válvulas activas tiene un cliente en total
+    public int contarPorCliente(int idCliente) {
+        String sql = "SELECT COUNT(*) FROM valvulas WHERE cliente_id = ? AND active = true";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idCliente);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al contar válvulas por cliente: " + e.getMessage());
+        }
+        return 0;
     }
 
     private void setNullableInt(PreparedStatement pstmt, int index, Integer value) throws SQLException {

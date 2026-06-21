@@ -445,11 +445,21 @@ public class FrmPlantaCRUD extends JFrame {
                 int idPlanta = (int) tblPlantas.getValueAt(filaSeleccionada, 0);
                 String nombrePlanta = (String) tblPlantas.getValueAt(filaSeleccionada, 1);
 
+                // --- LÓGICA DE ADVERTENCIA DINÁMICA ---
+                int cantidadValvulas = gestor.contarValvulasAsociadas(idPlanta);
+                String mensaje;
+
+                if (cantidadValvulas > 0) {
+                    mensaje = "⚠️ ATENCIÓN: La planta '" + nombrePlanta + "' tiene " + cantidadValvulas +
+                            " válvula(s) activa(s) asociada(s).\n\nSi continúa, se eliminará la planta Y TODAS sus válvulas en cascada.\n\n¿Desea continuar?";
+                } else {
+                    mensaje = "¿Está seguro de que desea eliminar la planta: " + nombrePlanta + " (ID: " + idPlanta + ")?";
+                }
+
                 int confirmacion = JOptionPane.showConfirmDialog(
-                        this,
-                        "¿Está seguro de que desea eliminar la planta: " + nombrePlanta + " (ID: " + idPlanta + ")?",
-                        "Confirmar Eliminación",
-                        JOptionPane.YES_NO_OPTION
+                        this, mensaje, "Confirmar Eliminación",
+                        JOptionPane.YES_NO_OPTION,
+                        cantidadValvulas > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.QUESTION_MESSAGE
                 );
 
                 if (confirmacion == JOptionPane.YES_OPTION) {
@@ -458,7 +468,7 @@ public class FrmPlantaCRUD extends JFrame {
                         limpiarFormulario();
                         cargarPlantas();
                     } else {
-                        JOptionPane.showMessageDialog(this, "No se pudo eliminar la planta (Verifique si hay válvulas o registros relacionados).", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Error: No se pudo eliminar la planta.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
 

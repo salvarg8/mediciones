@@ -64,17 +64,40 @@ public class ClienteDAO {
         }
     }
 
+    // --- MÉTODO ACTUALIZADO CON TRANSACCIÓN DELEGADA A CADA DAO ---
     public boolean eliminar(int id) {
-        // Cambiamos el DELETE físico por el borrado lógico
-        String sql = "UPDATE clientes SET active = false WHERE id = ?";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        String sqlCliente = "UPDATE clientes SET active = false WHERE id = ?";
 
-            pstmt.setInt(1, id);
-            return pstmt.executeUpdate() > 0;
+        // Instanciamos los DAOs correspondientes
+        ValvulaDAO valvulaDAO = new ValvulaDAO();
+        PlantaDAO plantaDAO = new PlantaDAO();
 
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false); // Iniciar transacción
+
+            try {
+                // 1. Delegamos a ValvulaDAO que borre sus registros
+                valvulaDAO.eliminarPorCliente(id, conn);
+
+                // 2. Delegamos a PlantaDAO que borre sus registros
+                plantaDAO.eliminarPorCliente(id, conn);
+
+                // 3. El ClienteDAO se encarga exclusivamente de borrar el cliente
+                try (PreparedStatement pstmtCliente = conn.prepareStatement(sqlCliente)) {
+                    pstmtCliente.setInt(1, id);
+                    int affectedRows = pstmtCliente.executeUpdate();
+
+                    conn.commit();
+                    return affectedRows > 0;
+                }
+
+            } catch (SQLException e) {
+                conn.rollback();
+                logger.error("Error en transacción de borrado lógico en cascada de cliente: " + e.getMessage(), e);
+                return false;
+            }
         } catch (SQLException e) {
-            logger.error("Error al realizar borrado lógico de cliente: " + e.getMessage(), e);
+            logger.error("Error de conexión al realizar borrado lógico de cliente: " + e.getMessage(), e);
             return false;
         }
     }

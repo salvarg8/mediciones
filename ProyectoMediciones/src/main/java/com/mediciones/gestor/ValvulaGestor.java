@@ -90,4 +90,11 @@ public class ValvulaGestor {
         return valvulaDAO.obtenerPorTag(tag); // Delega la lógica al DAO
     }
 
+    public int contarValvulasPorPlanta(int idPlanta) {
+        return valvulaDAO.contarPorPlanta(idPlanta);
+    }
+
+    public int contarPorCliente(int idCliente) {
+        return valvulaDAO.contarPorCliente(idCliente);
+    }
 }

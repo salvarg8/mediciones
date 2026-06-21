@@ -11,10 +11,12 @@ public class PlantaGestor {
 
     private final PlantaDAO plantaDAO;
     private final ClienteDAO clienteDAO;
+    private final ValvulaGestor valvulaGestor;
 
     public PlantaGestor() {
         plantaDAO = new PlantaDAO();
         clienteDAO = new ClienteDAO();
+        valvulaGestor = new ValvulaGestor();
     }
 
     public Planta obtenerPlantaPorId(int idPlanta) {
@@ -40,5 +42,13 @@ public class PlantaGestor {
      */
     public List<Planta> obtenerTodasPlantas() {
         return plantaDAO.getAllPlantas();
+    }
+
+    public int contarValvulasAsociadas(int idPlanta) {
+        return valvulaGestor.contarValvulasPorPlanta(idPlanta);
+    }
+
+    public int contarPorCliente(int idCliente) {
+        return plantaDAO.contarPorCliente(idCliente);
     }
 }

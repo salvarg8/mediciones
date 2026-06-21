@@ -186,7 +186,7 @@ public class FrmValvulasCRUD extends JFrame {
         searchPanel.add(cboBusquedaCliente);
         centerPanel.add(searchPanel, BorderLayout.NORTH);
 
-        String[] columnNames = {"ID", "Cliente", "Planta", "TAG", "N° Serie", "L. de Conex"};
+        String[] columnNames = {"ID", "Cliente", "Planta", "Tipo Válvula", "TAG", "N° Serie", "L. de Conex"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -327,15 +327,18 @@ public class FrmValvulasCRUD extends JFrame {
         }
     }
 
+    // --- CÓDIGO ACTUALIZADO ---
     private void poblarTabla(List<Valvula> valvulas) {
         for (Valvula valvula : valvulas) {
             String nombreCliente = (valvula.getCliente() != null) ? valvula.getCliente().getNombre() : "N/A";
             String nombrePlanta = (valvula.getPlanta() != null) ? valvula.getPlanta().getNombre() : "N/A";
+            String nombreTipo = (valvula.getTipoValvula() != null) ? valvula.getTipoValvula().getNombre() : "N/A";
 
             Object[] rowData = new Object[]{
                     valvula.getId(),
                     nombreCliente,
                     nombrePlanta,
+                    nombreTipo,         // <-- Agregado aquí
                     valvula.getTag(),
                     valvula.getNumeroSerie(),
                     valvula.getLugarConexion()

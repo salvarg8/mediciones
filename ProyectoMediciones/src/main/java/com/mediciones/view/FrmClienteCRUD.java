@@ -405,15 +405,33 @@ public class FrmClienteCRUD extends JFrame {
                 int idCliente = (int) tblClientes.getValueAt(filaSeleccionada, 0);
                 String nombreCliente = (String) tblClientes.getValueAt(filaSeleccionada, 1);
 
-                int confirmacion = JOptionPane.showConfirmDialog(this, "¿Está seguro de que desea eliminar al cliente: " + nombreCliente + " (ID: " + idCliente + ")?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+                // --- LÓGICA DE ADVERTENCIA DINÁMICA ---
+                int cantidadPlantas = controller.contarPlantasAsociadas(idCliente);
+                int cantidadValvulas = controller.contarValvulasAsociadas(idCliente);
+                String mensaje;
+
+                if (cantidadPlantas > 0 || cantidadValvulas > 0) {
+                    mensaje = "ATENCIÓN: El cliente '" + nombreCliente + "' tiene registradas:\n" +
+                            "  • " + cantidadPlantas + " planta(s)\n" +
+                            "  • " + cantidadValvulas + " válvula(s)\n\n" +
+                            "Si continúa, se eliminará el cliente Y TODAS sus dependencias.\n\n¿Desea continuar?";
+                } else {
+                    mensaje = "¿Está seguro de que desea eliminar al cliente: " + nombreCliente + " (ID: " + idCliente + ")?";
+                }
+
+                int confirmacion = JOptionPane.showConfirmDialog(
+                        this, mensaje, "Confirmar Eliminación",
+                        JOptionPane.YES_NO_OPTION,
+                        (cantidadPlantas > 0 || cantidadValvulas > 0) ? JOptionPane.WARNING_MESSAGE : JOptionPane.QUESTION_MESSAGE
+                );
 
                 if (confirmacion == JOptionPane.YES_OPTION) {
                     if (controller.eliminarCliente(idCliente)) {
-                        JOptionPane.showMessageDialog(this, "Cliente eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Cliente y todas sus dependencias eliminados exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                         limpiarFormulario();
                         cargarClientes();
                     } else {
-                        JOptionPane.showMessageDialog(this, "No se pudo eliminar el cliente (Verifique si hay registros relacionados).", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "No se pudo eliminar el cliente.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
 

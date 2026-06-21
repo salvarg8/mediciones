@@ -11,9 +11,14 @@ import java.util.List;
 public class ClienteGestor {
 
     private final ClienteDAO clienteDAO;
+    private final PlantaGestor plantaGestor;
+    private final ValvulaGestor valvulaGestor;
 
     public ClienteGestor() {
+
         this.clienteDAO = new ClienteDAO();
+        this.plantaGestor = new PlantaGestor();
+        this.valvulaGestor = new ValvulaGestor();
     }
 
     /**
@@ -72,5 +77,13 @@ public class ClienteGestor {
      */
     public Cliente obtenerClientePorId(int id) {
         return clienteDAO.obtenerPorId(id);
+    }
+
+    public int contarPlantasAsociadas(int idCliente) {
+        return plantaGestor.contarPorCliente(idCliente);
+    }
+
+    public int contarValvulasAsociadas(int idCliente) {
+        return valvulaGestor.contarPorCliente(idCliente);
     }
 }
