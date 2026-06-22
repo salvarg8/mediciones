@@ -15,7 +15,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import javax.swing.border.AbstractBorder;
 
-public class FrmCalibracionSensor extends JFrame {
+public class FrmCalibracionSensor extends JDialog {
 
     private SerialPort comPort;
     private volatile boolean capturing = false;
@@ -75,7 +75,7 @@ public class FrmCalibracionSensor extends JFrame {
 
         autoSelectPort();
         startCaptureOnFormOpen();
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setModal(true);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 

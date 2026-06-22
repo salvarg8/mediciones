@@ -21,7 +21,7 @@ import java.util.List;
  * Formulario para la gestión de Clientes (CRUD).
  * Extiende JFrame para ser usado como ventana modal, compatible con la llamada de FrmInicio.
  */
-public class FrmClienteCRUD extends JFrame {
+public class FrmClienteCRUD extends JDialog {
 
     private JLabel lblNombre;
     private JLabel lblNit;
@@ -55,9 +55,11 @@ public class FrmClienteCRUD extends JFrame {
      * Constructor del formulario CRUD de Clientes.
      */
     public FrmClienteCRUD() {
-        super("Gestión de Clientes");
+        //super("Gestión de Clientes");
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+        //setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+
+        setModal(true);
 
         this.controller = new ClienteGestor();
         setResizable(true); // Permitir redimensionamiento

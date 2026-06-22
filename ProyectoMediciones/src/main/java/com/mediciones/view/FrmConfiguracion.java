@@ -13,7 +13,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 
-public class FrmConfiguracion extends JFrame {
+public class FrmConfiguracion extends JDialog {
 
     // Labels
     private JLabel lblOrigen;
@@ -43,8 +43,9 @@ public class FrmConfiguracion extends JFrame {
 
     public FrmConfiguracion() {
 
-        super("Configuración");
+        //super("Configuración");
 
+        setModal(true);
         configuracionGestor = new ConfiguracionGestor();
         ubicacionGestor = new UbicacionGestor();
 

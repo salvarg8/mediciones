@@ -21,7 +21,7 @@ import java.util.List;
  * Formulario para la gestión de Operadores (CRUD).
  * Extiende JDialog para ser usado como ventana modal, compatible con la llamada de FrmInicio.
  */
-public class FrmOperadorCRUD extends JFrame {
+public class FrmOperadorCRUD extends JDialog {
 
     private JLabel lblNombre;
     private JLabel lblIdentificacion;
@@ -55,9 +55,11 @@ public class FrmOperadorCRUD extends JFrame {
      * Constructor del formulario CRUD de Operadores.
      */
     public FrmOperadorCRUD() {
-        super("Gestión de Operadores");
+        //super("Gestión de Operadores");
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+        //setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+
+        setModal(true);
 
         this.controller = new OperadorGestor();
         setResizable(true); // Permitir redimensionamiento
