@@ -68,16 +68,21 @@ public class ExcelGenerator {
             throw new FileNotFoundException("No existe el CSV: " + rutaCompletaCSV);
         }
 
-        File plantilla = new File("plantilla.xlsx");
-        if (!plantilla.exists()) {
-            System.out.println("ADVERTENCIA: No se encontró 'plantilla.xlsx'. Creando nuevo workbook.");
+        // --- INICIO DEL CÓDIGO ACTUALIZADO: Carga segura de la plantilla desde Resources ---
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("Plantillas/plantilla.xlsx")) {
+            if (is == null) {
+                logger.warn("ADVERTENCIA: No se encontró 'plantilla/plantilla.xlsx' en los recursos. Creando nuevo workbook.");
+                workbook = new XSSFWorkbook();
+                sheet = workbook.createSheet("Reporte");
+            } else {
+                workbook = new XSSFWorkbook(is);
+                sheet = workbook.getSheetAt(0);
+            }
+        } catch (IOException e) {
+            logger.error("Error al cargar la plantilla Excel desde los recursos.", e);
+            // Fallback: si algo se rompe, creamos uno en blanco para que el programa no explote
             workbook = new XSSFWorkbook();
             sheet = workbook.createSheet("Reporte");
-        } else {
-            try (FileInputStream fis = new FileInputStream(plantilla)) {
-                workbook = new XSSFWorkbook(fis);
-            }
-            sheet = workbook.getSheetAt(0);
         }
 
         List<Double> xValues = new ArrayList<>();
