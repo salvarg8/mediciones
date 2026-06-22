@@ -2,19 +2,16 @@ package com.mediciones.view;
 
 import com.mediciones.gestor.ClienteGestor;
 import com.mediciones.model.Cliente;
+import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.List;
 
 /**
@@ -44,6 +41,7 @@ public class FrmClienteCRUD extends JDialog {
     private final ClienteGestor controller;
     private Cliente clienteSeleccionado;
 
+
     // Variables para manejo de escalado proporcional
     private int originalWidth = 600;
     private int originalHeight = 500;
@@ -55,13 +53,10 @@ public class FrmClienteCRUD extends JDialog {
      * Constructor del formulario CRUD de Clientes.
      */
     public FrmClienteCRUD() {
-        //super("Gestión de Clientes");
-
-        //setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
-
         setModal(true);
 
         this.controller = new ClienteGestor();
+
         setResizable(true); // Permitir redimensionamiento
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -333,9 +328,8 @@ public class FrmClienteCRUD extends JDialog {
         String nombre = txtNombre.getText().trim();
         String nit = txtNit.getText().trim();
 
-        if (nombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El campo Nombre es obligatorio.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
-            return;
+        if (ValidadorUI.esCampoVacio(txtNombre, "Nombre del Cliente", this)) {
+            return; // Cortamos la ejecución, el usuario debe llenar el campo
         }
 
         Cliente clienteAGuardar;

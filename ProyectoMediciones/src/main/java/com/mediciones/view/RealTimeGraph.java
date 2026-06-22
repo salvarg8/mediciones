@@ -3,6 +3,7 @@ package com.mediciones.view;
 import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.gestor.RealTimeGraphGestor;
 import com.mediciones.model.*;
+import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -221,6 +222,8 @@ public class RealTimeGraph extends JFrame {
         pressureRequestedField = new JTextField();
         pressureRequestedField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
 
+        ValidadorUI.soloNumeros(pressureRequestedField);
+
         pressureRequestedField.addActionListener(e -> updatePressureRequestedValue());
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -334,8 +337,8 @@ public class RealTimeGraph extends JFrame {
     }
 
     private void updatePressureRequestedValue() {
-        String pressureText = pressureRequestedField.getText().trim();
-        if (!pressureText.isEmpty()) {
+        String pressureText = pressureRequestedField.getText().trim().replace(",", ".");
+        if (!pressureText.isEmpty() && !pressureText.equals(".")) {
             try {
                 double newValue = Double.parseDouble(pressureText);
                 if (newValue > 0) {
@@ -343,9 +346,7 @@ public class RealTimeGraph extends JFrame {
                 } else {
                     showErrorMessage("La Presión Solicitada debe ser mayor que cero.");
                 }
-            } catch (NumberFormatException ex) {
-                showErrorMessage("Ingrese un valor numérico válido para la Presión Solicitada.");
-                logger.error("Error al actualizar la Presión Solicitada", ex);
+            } catch (NumberFormatException ignored) {
             }
         } else {
             gestor.updatePressureRequestedValue(0.0);
@@ -407,16 +408,37 @@ public class RealTimeGraph extends JFrame {
             cmbTipoValvula.addActionListener(e -> filtrarValvulas());
         }
 
-        // ... El resto de tus botones (startStopButton, btnSalir, etc.) quedan exactamente igual ...
-
         startStopButton.addActionListener(e -> {
             if (!gestor.isRunning()) {
-                double pressure = 0;
-                try {
-                    pressure = Double.parseDouble(pressureRequestedField.getText().trim());
-                } catch (Exception ignored) {
+
+                // 1. VALIDACIÓN LÓGICA: Comprobar número válido y campos obligatorios
+                if (!ValidadorUI.esNumeroValido(pressureRequestedField, "Presión Solicitada", this)) {
+                    return;
                 }
-                //gestor.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+
+                if (cmbCliente.getSelectedItem() == null) {
+                    showErrorMessage("Debe seleccionar un Cliente para iniciar la prueba.");
+                    cmbCliente.requestFocus();
+                    return;
+                }
+                if (cmbValvula.getSelectedItem() == null) {
+                    showErrorMessage("Debe seleccionar una Válvula (TAG) para iniciar la prueba.");
+                    cmbValvula.requestFocus();
+                    return;
+                }
+                if (cmbOperador.getSelectedItem() == null) {
+                    showErrorMessage("Debe seleccionar un Operador.");
+                    cmbOperador.requestFocus();
+                    return;
+                }
+                if (cmbFluido.getSelectedItem() == null) {
+                    showErrorMessage("Debe seleccionar un Fluido.");
+                    cmbFluido.requestFocus();
+                    return;
+                }
+
+                double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
+
                 gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
@@ -435,7 +457,6 @@ public class RealTimeGraph extends JFrame {
         returnButton.addActionListener(e -> gestor.discardData());
     }
 
-    // NUEVO: Método que envía al gestor tanto la planta como el tipo para que filtre
     private void filtrarValvulas() {
         Object selectedPlanta = cmbPlanta.getSelectedItem();
         Object selectedTipo = cmbTipoValvula.getSelectedItem();
