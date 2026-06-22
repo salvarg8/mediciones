@@ -13,7 +13,7 @@ ProyectoMediciones/mediciones_db.sqlite
 
 # Generated reports
 *.xlsx
-!plantilla.xlsx
+!ProyectoMediciones/src/main/resources/Plantillas/plantilla.xlsx
 
 # Logs
 *.log
