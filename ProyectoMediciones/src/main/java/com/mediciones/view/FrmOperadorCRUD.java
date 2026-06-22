@@ -2,19 +2,16 @@ package com.mediciones.view;
 
 import com.mediciones.gestor.OperadorGestor;
 import com.mediciones.model.Operador;
+import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.List;
 
 /**
@@ -55,10 +52,6 @@ public class FrmOperadorCRUD extends JDialog {
      * Constructor del formulario CRUD de Operadores.
      */
     public FrmOperadorCRUD() {
-        //super("Gestión de Operadores");
-
-        //setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
-
         setModal(true);
 
         this.controller = new OperadorGestor();
@@ -110,7 +103,7 @@ public class FrmOperadorCRUD extends JDialog {
         int scaledGap = (int) (5 * scaleFactor);   // Base gap
 
         // Fuente escalada
-        Font scaledFont = new Font("Segoe UI", Font.BOLD, (int)(14 * scaleFactor));
+        Font scaledFont = new Font("Segoe UI", Font.BOLD, (int) (14 * scaleFactor));
 
         // Ajustar fuente de las etiquetas
         lblNombre.setFont(scaledFont);
@@ -123,7 +116,7 @@ public class FrmOperadorCRUD extends JDialog {
         btnEliminar.setFont(scaledFont);
         btnActualizar.setFont(scaledFont);
         tblOperadores.setFont(scaledFont);
-        tblOperadores.setRowHeight((int)(25 * scaleFactor));
+        tblOperadores.setRowHeight((int) (25 * scaleFactor));
 
         // Ajustar fuente de los títulos de los bordes
         formBorder.setTitleFont(scaledFont);
@@ -136,7 +129,7 @@ public class FrmOperadorCRUD extends JDialog {
         // Ajustar tabla
         if (tblOperadores.getColumnModel().getColumnCount() > 0) {
             for (int i = 0; i < tblOperadores.getColumnModel().getColumnCount(); i++) {
-                tblOperadores.getColumnModel().getColumn(i).setPreferredWidth((int)(100 * scaleFactor));
+                tblOperadores.getColumnModel().getColumn(i).setPreferredWidth((int) (100 * scaleFactor));
             }
         }
 
@@ -170,24 +163,28 @@ public class FrmOperadorCRUD extends JDialog {
         formPanel.setBorder(formBorder);
 
         // Etiqueta y campo Nombre (sin ":")
-        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.insets = new Insets(6, 10, 6, 4);
         lblNombre = new JLabel("Nombre:"); // Guardar referencia
         lblNombre.setFont(baseFont);
         formPanel.add(lblNombre, gbc);
         txtNombre = new JTextField(20);
-        gbc.gridx = 1; gbc.gridy = 0;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
         gbc.insets = new Insets(6, 4, 6, 10);
         gbc.weightx = 1.0;
         formPanel.add(txtNombre, gbc);
 
         // Etiqueta y campo Identificación (sin ":")
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         lblIdentificacion = new JLabel("   DNI:"); // Guardar referencia
         lblIdentificacion.setFont(baseFont);
         formPanel.add(lblIdentificacion, gbc);
         txtIdentificacion = new JTextField(20);
-        gbc.gridx = 1; gbc.gridy = 1;
+        gbc.gridx = 1;
+        gbc.gridy = 1;
         gbc.weightx = 1.0;
         formPanel.add(txtIdentificacion, gbc);
 
@@ -199,7 +196,8 @@ public class FrmOperadorCRUD extends JDialog {
         formButtonPanel.add(btnGuardar);
         formButtonPanel.add(btnCancelar);
 
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
         gbc.gridwidth = 2;
         gbc.weightx = 0;
         formPanel.add(formButtonPanel, gbc);
@@ -218,6 +216,7 @@ public class FrmOperadorCRUD extends JDialog {
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
+
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return columnIndex == 0 ? Integer.class : String.class;
@@ -309,7 +308,7 @@ public class FrmOperadorCRUD extends JDialog {
             List<Operador> operadores = controller.obtenerTodosOperadores();
 
             for (Operador operador : operadores) {
-                Object[] rowData = new Object[] {
+                Object[] rowData = new Object[]{
                         operador.getId(),
                         operador.getNombre(),
                         operador.getIdentificacion()
@@ -335,10 +334,9 @@ public class FrmOperadorCRUD extends JDialog {
         String nombre = txtNombre.getText().trim();
         String identificacion = txtIdentificacion.getText().trim();
 
-        if (nombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El campo Nombre es obligatorio.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if (ValidadorUI.esCampoVacio(txtNombre, "Nombre", this)) return;
+        if (ValidadorUI.esCampoVacio(txtIdentificacion, "DNI", this)) return;
+
 
         Operador operadorAGuardar;
         String mensajeExito;
@@ -389,7 +387,7 @@ public class FrmOperadorCRUD extends JDialog {
                 btnGuardar.setText("Guardar Cambios (ID: " + idOperador + ")");
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición " , "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al cargar los datos para edición ", "Error", JOptionPane.ERROR_MESSAGE);
                 logger.error("Error al cargar los datos para edición", ex);
             }
         } else {

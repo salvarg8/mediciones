@@ -2,6 +2,7 @@ package com.mediciones.view;
 
 import com.mediciones.gestor.*;
 import com.mediciones.model.*;
+import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,6 +195,7 @@ public class FrmValvulasCRUD extends JDialog {
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
+
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return columnIndex == 0 ? Integer.class : String.class;
@@ -350,6 +352,9 @@ public class FrmValvulasCRUD extends JDialog {
     }
 
     private void btnGuardarActionPerformed(ActionEvent e) {
+
+        if (ValidadorUI.esCampoVacio(txtTag, "TAG de la Válvula", this)) return;
+
         Cliente cliente = (Cliente) cboCliente.getSelectedItem();
         Planta planta = (Planta) cboPlanta.getSelectedItem();
         Fluido fluido = (Fluido) cboFluidoServicio.getSelectedItem();
