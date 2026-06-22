@@ -191,21 +191,53 @@ public class RealTimeGraphGestor {
             view.setInfoFieldsEnabled(false);
 
             dataThread = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(comPort.getInputStream()))) {
+                boolean porDesconexion = false;
+                String mensajeDesconexion = "Error desconocido en los sensores.";
+
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(comPort.getInputStream(), StandardCharsets.UTF_8))) {
+                    // Guardamos el momento exacto en el que inicia la captura
+                    long ultimoDatoTime = System.currentTimeMillis();
+
                     while (comPort.isOpen() && !Thread.currentThread().isInterrupted()) {
-                        if (comPort.bytesAvailable() > 0) {
+                        int bytesDisponibles = comPort.bytesAvailable();
+
+                        // CASO 1: Desconexión física instantánea (jSerialComm retorna -1 si se desenchufa el USB)
+                        if (bytesDisponibles < 0) {
+                            throw new IOException("Se desconectó físicamente el cable USB del banco de pruebas.");
+                        }
+
+                        if (bytesDisponibles > 0) {
                             String d = reader.readLine();
                             if (d != null) {
                                 processNewData(d);
+                                ultimoDatoTime = System.currentTimeMillis(); // Reseteamos el temporizador si llegaron datos
+                            }
+                        } else {
+                            // CASO 2: El cable sigue enchufado pero el microcontrolador dejó de transmitir datos (se colgó)
+                            // Si pasan más de 2000 milisegundos (2 segundos) sin recibir nada, asumimos pérdida de señal
+                            if (System.currentTimeMillis() - ultimoDatoTime > 2000) {
+                                throw new IOException("Se perdió la señal del sensor. El dispositivo no responde (Timeout de 2s).");
                             }
                         }
                         Thread.sleep(50);
                     }
                 } catch (InterruptedException e) {
-                    logger.error("Hilo de captura interrumpido. startDatacapture()", e);
+                    logger.info("Hilo de captura interrumpido normalmente al presionar Detener.");
                 } catch (Exception ex) {
-                    logger.error("Error en la lectura del puerto. startDatacapture()", ex);
+                    logger.error("Error crítico detectado en la lectura del puerto serial", ex);
+                    porDesconexion = true;
+                    mensajeDesconexion = "Error crítico detectado en la lectura del puerto serial";
                 } finally {
+                    // Si el hilo terminó debido a una desconexión abrupta/error, actualizamos la UI
+                    if (porDesconexion) {
+                        final String msgPopUp = mensajeDesconexion;
+                        SwingUtilities.invokeLater(() -> {
+                            view.setLedColor(Color.RED); // Cambiamos el indicador visual a ROJO
+                            view.showErrorMessage("⚠️ Alerta de Hardware:\n" + msgPopUp); // Lanzamos el cartel de alerta
+                        });
+                    }
+
+                    // Aseguramos que la interfaz vuelva a su estado original de todas formas
                     stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
                 }
             });
