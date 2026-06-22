@@ -276,7 +276,15 @@ public class RealTimeGraphGestor {
             dataThread.interrupt();
         }
 
-        if (csvDataPoints.isEmpty()) {
+        // 1. SOLUCIÓN AL BUG: Tomar una copia segura y rápida de la lista.
+        // Bloqueamos csvDataPoints solo un instante para copiarla sin que el hilo serial interfiera.
+        List<String> copiaDatos;
+        synchronized (csvDataPoints) {
+            copiaDatos = new ArrayList<>(csvDataPoints);
+        }
+
+        // 2. A partir de aquí, usamos "copiaDatos" en lugar de "csvDataPoints"
+        if (copiaDatos.isEmpty()) {
             view.resetCaptureUI();
             return;
         }
@@ -284,9 +292,11 @@ public class RealTimeGraphGestor {
         double minPressure = 0.76 * pressureRequested;
         int startIndex = -1;
         double startTime = 0;
-        for (int i = 0; i < csvDataPoints.size(); i++) {
+
+        // Iteramos sobre la copia de forma 100% segura
+        for (int i = 0; i < copiaDatos.size(); i++) {
             try {
-                String[] parts = csvDataPoints.get(i).split(";");
+                String[] parts = copiaDatos.get(i).split(";");
                 if (parts.length >= 2) {
                     double pressure = Double.parseDouble(parts[1]);
                     if (pressure >= minPressure) {
@@ -302,7 +312,7 @@ public class RealTimeGraphGestor {
         if (startIndex == -1) {
             startIndex = 0;
             try {
-                String[] parts = csvDataPoints.get(0).split(";");
+                String[] parts = copiaDatos.get(0).split(";");
                 if (parts.length >= 1) {
                     startTime = Double.parseDouble(parts[0]);
                 }
@@ -310,16 +320,17 @@ public class RealTimeGraphGestor {
             }
         }
 
+        // Ya no necesitamos sincronizar esta lista porque es totalmente local
         List<String> filteredDataPoints = new ArrayList<>();
-        for (int i = startIndex; i < csvDataPoints.size(); i++) {
+        for (int i = startIndex; i < copiaDatos.size(); i++) {
             try {
-                String[] parts = csvDataPoints.get(i).split(";");
+                String[] parts = copiaDatos.get(i).split(";");
                 if (parts.length >= 3) {
                     double time = Double.parseDouble(parts[0]);
                     double pressure = Double.parseDouble(parts[1]);
                     double temperature = Double.parseDouble(parts[2]);
                     double adjustedTime = time - startTime;
-                    filteredDataPoints.add(String.format("%.1f;%.2f;%.2f", adjustedTime, pressure, temperature).replace(",", "."));
+                    filteredDataPoints.add(String.format(java.util.Locale.US, "%.1f;%.2f;%.2f", adjustedTime, pressure, temperature));
                 }
             } catch (Exception ignored) {
             }
@@ -333,11 +344,13 @@ public class RealTimeGraphGestor {
                 writer.write("Operador;" + operador.getNombre() + "\n");
                 writer.write("Fluido;" + fluido.getNombre() + "\n");
                 writer.write("Presión;" + pressureRequested + "\n");
-                writer.write("Maximo;" + String.format("%.2f", maxValue).replace(",", ".") + "\n");
-                writer.write("Recuperacion;" + ((recValue == Double.MAX_VALUE || !maxReached) ? "0.00" : String.format("%.2f", recValue).replace(",", ".")) + "\n");
+                writer.write("Maximo;" + String.format(java.util.Locale.US, "%.2f", maxValue) + "\n");
+                writer.write("Recuperacion;" + ((recValue == Double.MAX_VALUE || !maxReached) ? "0.00" : String.format(java.util.Locale.US, "%.2f", recValue)) + "\n");
                 writer.write("\ntiempo_s;Presion (" + view.getSelectedPressureUnit() + ");temperatura\n");
-                synchronized (filteredDataPoints) {
-                    for (String p : filteredDataPoints) writer.write(p + "\n");
+
+                // Borramos el "synchronized (filteredDataPoints)" que era inútil
+                for (String p : filteredDataPoints) {
+                    writer.write(p + "\n");
                 }
             } catch (IOException ignored) {
             }

@@ -1,31 +1,26 @@
 package com.mediciones.view;
 
-import com.fazecast.jSerialComm.*;
+import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.gestor.RealTimeGraphGestor;
-import com.mediciones.model.Cliente;
-import com.mediciones.model.Fluido;
-import com.mediciones.model.Operador;
-import com.mediciones.model.Planta;
-import com.mediciones.model.TipoValvula; // NUEVO: Importamos TipoValvula
-import com.mediciones.model.Valvula;
+import com.mediciones.model.*;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.List;
-import javax.swing.border.TitledBorder;
 
 public class RealTimeGraph extends JFrame {
     private final RealTimeGraphGestor gestor;
@@ -99,11 +94,11 @@ public class RealTimeGraph extends JFrame {
     }
 
     private void adjustLayout(double scaleFactor) {
-        Font scaledFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int)(12 * scaleFactor)));
-        Font comboBoxFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int)(12 * scaleFactor)));
-        Font labelFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int)(12 * scaleFactor)));
-        Font indicatorTitleFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int)(12 * scaleFactor)));
-        Font indicatorValueFont = new Font("Consolas", Font.BOLD, Math.max(28, (int)(70 * scaleFactor)));
+        Font scaledFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int) (12 * scaleFactor)));
+        Font comboBoxFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int) (12 * scaleFactor)));
+        Font labelFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int) (12 * scaleFactor)));
+        Font indicatorTitleFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int) (12 * scaleFactor)));
+        Font indicatorValueFont = new Font("Consolas", Font.BOLD, Math.max(28, (int) (70 * scaleFactor)));
 
         if (northPanel != null && northPanel.getBorder() instanceof TitledBorder) {
             ((TitledBorder) northPanel.getBorder()).setTitleFont(scaledFont);
@@ -218,9 +213,20 @@ public class RealTimeGraph extends JFrame {
 
         pressureRequestedField.addActionListener(e -> updatePressureRequestedValue());
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { updatePressureRequestedValue(); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { updatePressureRequestedValue(); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { updatePressureRequestedValue(); }
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updatePressureRequestedValue();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updatePressureRequestedValue();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updatePressureRequestedValue();
+            }
         });
 
         pressureRequestedPanel.add(pressureRequestedField, BorderLayout.CENTER);
@@ -269,7 +275,7 @@ public class RealTimeGraph extends JFrame {
         startStopButton = new Button3D("Iniciar toma de datos", new Color(200, 255, 200));
         generateReportButton = new Button3D("Generar Reporte", new Color(255, 255, 200));
         returnButton = new Button3D("Descartar", new Color(255, 200, 200));
-        btnRecargarPortal = new Button3D("Recargar Datos  ",new Color(255, 255, 200));
+        btnRecargarPortal = new Button3D("Recargar Datos  ", new Color(255, 255, 200));
         btnSalir = new Button3D("Salir", new Color(255, 200, 200));
 
         gbcSouth.gridx = 0;
@@ -354,8 +360,11 @@ public class RealTimeGraph extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY, 1), title);
         border.setTitleFont(new Font("Segoe UI", Font.BOLD, 12));
-        panel.setBorder(border); label.setFont(font); label.setForeground(foreground);
-        panel.add(label, BorderLayout.CENTER); panel.setPreferredSize(new Dimension(150, 70));
+        panel.setBorder(border);
+        label.setFont(font);
+        label.setForeground(foreground);
+        panel.add(label, BorderLayout.CENTER);
+        panel.setPreferredSize(new Dimension(150, 70));
         return panel;
     }
 
@@ -395,14 +404,16 @@ public class RealTimeGraph extends JFrame {
                 double pressure = 0;
                 try {
                     pressure = Double.parseDouble(pressureRequestedField.getText().trim());
-                } catch(Exception ignored){}
-                gestor.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                } catch (Exception ignored) {
+                }
+                //gestor.startSimulatedDataCapture((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), pressure);
+                gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
-                gestor.stopDataCapture((Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem());
+                gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
         });
 
-        generateReportButton.addActionListener(e -> gestor.guardarExcel((Cliente)cmbCliente.getSelectedItem(), (Valvula)cmbValvula.getSelectedItem(), (Operador)cmbOperador.getSelectedItem(), (Fluido)cmbFluido.getSelectedItem()));
+        generateReportButton.addActionListener(e -> gestor.guardarExcel((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem()));
 
         btnSalir.addActionListener(e -> {
             gestor.closePort();
