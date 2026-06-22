@@ -333,7 +333,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         timer.start();
 
         controller.detenerComunicacionSerial();
-        JFrame f = null;
+        Window f = null;
         if (source == btnClientes) f = new FrmClienteCRUD();
         else if (source == btnOperador) f = new FrmOperadorCRUD();
         else if (source == btnValvulas) f = new FrmValvulasCRUD();
@@ -342,7 +342,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         else if (source == btnTiposValvula) f = new FrmTipoValvulaCRUD();
         else if (source == btnConfiguracion) f = new FrmConfiguracion();
         else if (source == btnCalibracion) f = new FrmCalibracionSensor();
-        else if (source == btnMedicion) f = new RealTimeGraph();
+        else if (source == btnMedicion) f = RealTimeGraph.getInstance();
 
         if (f != null) {
             f.setLocationRelativeTo(this);

@@ -24,7 +24,7 @@ import java.util.List;
  * Formulario para la gestión de Plantas (CRUD).
  * Extiende JFrame manteniendo el escalado proporcional y diseño idéntico a FrmOperadorCRUD.
  */
-public class FrmPlantaCRUD extends JFrame {
+public class FrmPlantaCRUD extends JDialog {
 
     private JLabel lblNombre;
     private JLabel lblCliente;
@@ -59,10 +59,11 @@ public class FrmPlantaCRUD extends JFrame {
      * Constructor del formulario CRUD de Plantas.
      */
     public FrmPlantaCRUD() {
-        super("Gestión de Plantas");
+        //super("Gestión de Plantas");
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // Estado inicial maximizado
+        //setExtendedState(JFrame.MAXIMIZED_BOTH); // Estado inicial maximizado
 
+        setModal(true);
         this.gestor = new PlantaGestor();
         this.clienteGestor = new ClienteGestor(); // Inicialización
         setResizable(true);

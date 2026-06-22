@@ -18,7 +18,7 @@ import java.util.List;
  * Formulario para la gestión de Válvulas (CRUD).
  * Extiende JFrame para ser usado como ventana modal, compatible con la llamada de FrmInicio.
  */
-public class FrmValvulasCRUD extends JFrame {
+public class FrmValvulasCRUD extends JDialog {
 
     // Etiquetas
     private JLabel lblCliente;
@@ -82,7 +82,7 @@ public class FrmValvulasCRUD extends JFrame {
      * Constructor del formulario CRUD de Válvulas.
      */
     public FrmValvulasCRUD() {
-        super("Gestión de Válvulas");
+        //super("Gestión de Válvulas");
         this.gestor = new ValvulaGestor();
         this.clienteGestor = new ClienteGestor();
         this.fluidoGestor = new FluidoGestor();
@@ -93,7 +93,9 @@ public class FrmValvulasCRUD extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setMinimumSize(new Dimension(800, 600));
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        //setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        setModal(true);
 
         initComponents();
         cargarClientesYFluidos();

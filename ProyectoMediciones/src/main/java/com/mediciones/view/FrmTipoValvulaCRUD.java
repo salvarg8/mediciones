@@ -12,7 +12,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 
-public class FrmTipoValvulaCRUD extends JFrame {
+public class FrmTipoValvulaCRUD extends JDialog {
 
     private JTextField txtNombre;
     private JTable tblTipos;
@@ -27,9 +27,10 @@ public class FrmTipoValvulaCRUD extends JFrame {
     private TipoValvula tipoSeleccionado;
 
     public FrmTipoValvulaCRUD() {
-        super("Gestión de Tipos de Válvula");
+        //super("Gestión de Tipos de Válvula");
         this.gestor = new TipoValvulaGestor();
 
+        setModal(true);
         setSize(600, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

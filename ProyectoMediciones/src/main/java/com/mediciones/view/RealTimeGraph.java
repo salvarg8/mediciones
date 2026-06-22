@@ -23,6 +23,7 @@ import java.awt.event.ComponentEvent;
 import java.util.List;
 
 public class RealTimeGraph extends JFrame {
+    private static RealTimeGraph instance;
     private final RealTimeGraphGestor gestor;
     private JFreeChart chart;
     private XYSeries series;
@@ -49,11 +50,13 @@ public class RealTimeGraph extends JFrame {
     private JPanel northPanel;
     private JComboBox<String> cmbSensor;
     private JPanel indicatorPanel;
+
     private JTextField pressureRequestedField;
+
 
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraph.class);
 
-    public RealTimeGraph() {
+    private RealTimeGraph() {
         this.gestor = new RealTimeGraphGestor(this);
         setTitle("Medición en Tiempo Real");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -83,6 +86,13 @@ public class RealTimeGraph extends JFrame {
                 gestor.closePort();
             }
         });
+    }
+
+    public static RealTimeGraph getInstance() {
+        if (instance == null || !instance.isDisplayable()) {
+            instance = new RealTimeGraph();
+        }
+        return instance;
     }
 
     private void resizeProportionally() {

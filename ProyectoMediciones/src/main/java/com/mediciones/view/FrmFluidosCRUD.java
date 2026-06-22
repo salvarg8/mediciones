@@ -21,7 +21,7 @@ import java.util.List;
  * Formulario para la gestión de Fluidos (CRUD).
  * Extiende JFrame para ser usado como ventana modal, compatible con la llamada de FrmInicio.
  */
-public class FrmFluidosCRUD extends JFrame {
+public class FrmFluidosCRUD extends JDialog {
 
     private JLabel lblNombre;
     private TitledBorder formBorder;
@@ -54,9 +54,11 @@ public class FrmFluidosCRUD extends JFrame {
      * Constructor del formulario CRUD de Fluidos.
      */
     public FrmFluidosCRUD() {
-        super("Gestión de Fluidos");
+        //super("Gestión de Fluidos");
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+        //setExtendedState(JFrame.MAXIMIZED_BOTH); // estado inicial
+
+        setModal(true);
 
         this.controller = new FluidoGestor();
         setResizable(true); // Permitir redimensionamiento
