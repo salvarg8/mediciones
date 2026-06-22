@@ -84,7 +84,6 @@ public class ExcelGenerator {
             workbook = new XSSFWorkbook();
             sheet = workbook.createSheet("Reporte");
         }
-        // --- FIN DEL CÓDIGO ACTUALIZADO ---
 
         List<Double> xValues = new ArrayList<>();
         List<Double> yValues = new ArrayList<>();
