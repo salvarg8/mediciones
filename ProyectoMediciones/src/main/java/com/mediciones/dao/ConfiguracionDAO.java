@@ -1,7 +1,6 @@
 package com.mediciones.dao;
 
 import com.mediciones.model.Configuracion;
-import com.mediciones.view.FrmOperadorCRUD;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +46,7 @@ public class ConfiguracionDAO {
         String sql =
                 "INSERT INTO configuracion " +
                         "(id, origen_datos, ruta_archivo, puerto_com_default) " +
-                        "VALUES (1, ?, ?) " +
+                        "VALUES (1, ?, ?, ?) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "origen_datos = VALUES(origen_datos), " +
                         "ruta_archivo = VALUES(ruta_archivo), " +
