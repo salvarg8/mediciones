@@ -381,22 +381,38 @@ public class ExcelGenerator {
         XDDFValueAxis yAxis = chart.createValueAxis(AxisPosition.LEFT);
         yAxis.setTitle(unidadPresion);
 
-        // Calcular máximo y mínimo del eje Y
-        double maxY = 0;
-        for (Double y : yValues) {
-            if (y > maxY) {
-                maxY = y;
-            }
-        }
+        // --- CENTRADO DINÁMICO DEL EJE Y (ESTILO OSCILOSCOPIO) ---
+        if (presionAperturaSolicitada != null) {
+            double valorObjetivo = presionAperturaSolicitada;
+            double maxDesviacion = 0.0;
 
-        if (maxY > 0) {
-            double minY = 0.76 * maxY;
-
-            if (presionAperturaSolicitada != null) {
-                minY = Math.min(minY, presionAperturaSolicitada * 0.98);
+            // 1. Buscamos el pico de presión más alejado de nuestra línea constante
+            for (Double y : yValues) {
+                double diferencia = Math.abs(y - valorObjetivo);
+                if (diferencia > maxDesviacion) {
+                    maxDesviacion = diferencia;
+                }
             }
 
-            yAxis.setMinimum(minY);
+            // 2. Aplicamos la misma regla de margen dinámico (mínimo 5 unidades o la desviación + 2)
+            double margenVisual = Math.max(5.0, maxDesviacion + 2.0);
+
+            // 3. Fijamos los límites superior e inferior del gráfico en Excel
+            yAxis.setMinimum(valorObjetivo - margenVisual);
+            yAxis.setMaximum(valorObjetivo + margenVisual);
+
+        } else {
+            // Comportamiento por defecto si no hay presión solicitada
+            double maxY = 0;
+            for (Double y : yValues) {
+                if (y > maxY) {
+                    maxY = y;
+                }
+            }
+            if (maxY > 0) {
+                yAxis.setMinimum(0.76 * maxY);
+                yAxis.setMaximum(maxY * 1.1); // 10% de aire arriba para que no choque
+            }
         }
 
         // Serie principal (Presión)
@@ -430,7 +446,7 @@ public class ExcelGenerator {
 
         seriePresion.setLineProperties(lineaRoja);
 
-        // CORRECCIÓN: Línea horizontal de presión solicitada sin duplicar filas
+        // Línea horizontal de presión solicitada sin duplicar filas
         if (presionAperturaSolicitada != null) {
 
             // Usamos el MISMO rango de Tiempo (Columna 10 / K)
