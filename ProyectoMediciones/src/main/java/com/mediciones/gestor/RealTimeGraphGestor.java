@@ -1,6 +1,7 @@
 package com.mediciones.gestor;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.mediciones.dao.ConfiguracionDAO;
 import com.mediciones.dao.RealTimeGraphDAO;
 import com.mediciones.model.*;
 import com.mediciones.reportes.ExcelGenerator;
@@ -26,6 +27,7 @@ public class RealTimeGraphGestor {
     private final UbicacionGestor ubicacionGestor;
     private final ValvulaGestor valvulaGestor;
     private final TipoValvulaGestor tipoValvulaGestor; // NUEVO: Gestor de Tipos
+    private ConfiguracionDAO configDAO;
 
     private SerialPort comPort;
     private volatile boolean running = false;
@@ -52,6 +54,7 @@ public class RealTimeGraphGestor {
         this.ubicacionGestor = new UbicacionGestor();
         this.valvulaGestor = new ValvulaGestor();
         this.tipoValvulaGestor = new TipoValvulaGestor(); // NUEVO: Inicialización
+        this.configDAO = new ConfiguracionDAO();
     }
 
     public void init() {
@@ -60,17 +63,42 @@ public class RealTimeGraphGestor {
 
     public void autoSelectAndOpenPort(JComboBox<String> portCombo) {
         SerialPort[] ports = SerialPort.getCommPorts();
-        if (ports.length > 0) {
+        if (ports.length == 0) return;
+
+        // 1. Obtenemos el puerto guardado en la base de datos
+        Configuracion config = configDAO.obtenerConfiguracion();
+        String puertoFavorito = (config != null) ? config.getPuertoComDefault() : null;
+
+        int selectedIndex = -1;
+
+        if (puertoFavorito != null && !puertoFavorito.trim().isEmpty()) {
+            for (int i = 0; i < ports.length; i++) {
+                if (ports[i].getSystemPortName().equalsIgnoreCase(puertoFavorito)) {
+                    selectedIndex = i;
+                    logger.info("Puerto COM persistente encontrado: " + puertoFavorito);
+                    break;
+                }
+            }
+        }
+
+        // 3. Si no tenía puerto guardado (o el cable no está), usamos la lógica automática
+        if (selectedIndex == -1) {
             for (int i = 0; i < ports.length; i++) {
                 String name = ports[i].getDescriptivePortName().toLowerCase();
                 if (name.contains("arduino") || name.contains("usb") || name.contains("ch340")) {
-                    portCombo.setSelectedIndex(i);
-                    openSelectedPort(ports[i]);
-                    return;
+                    selectedIndex = i;
+                    break;
                 }
             }
-            openSelectedPort(ports[ports.length - 1]);
         }
+
+        // 4. Si fallan ambas, seleccionamos el último de la lista como fallback
+        if (selectedIndex == -1) {
+            selectedIndex = ports.length - 1;
+        }
+
+        portCombo.setSelectedIndex(selectedIndex);
+        // openSelectedPort(ports[selectedIndex]); // Descomenta esta línea si abrías el puerto automáticamente al iniciar
     }
 
     private void openSelectedPort(SerialPort port) {
@@ -242,6 +270,16 @@ public class RealTimeGraphGestor {
                 }
             });
             dataThread.start();
+
+            if (!comPort.openPort()) throw new IOException("No se pudo abrir el puerto.");
+            view.setLedColor(Color.GREEN);
+
+            Configuracion config = configDAO.obtenerConfiguracion();
+            if (config == null) config = new Configuracion();
+            config.setPuertoComDefault(comPort.getSystemPortName());
+            configDAO.guardarConfiguracion(config);
+
+
         } catch (Exception ex) {
             logger.error("error al iniciar la captura. startDataCapture()", ex);
             view.showErrorMessage("Error " + ex.getMessage());
