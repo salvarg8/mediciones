@@ -18,7 +18,7 @@ public class ConfiguracionDAO {
     public Configuracion obtenerConfiguracion() {
 
         String sql =
-                "SELECT id, origen_datos, ruta_archivo " +
+                "SELECT id, origen_datos, ruta_archivo, puerto_com_default " +
                         "FROM configuracion WHERE id = 1";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -30,7 +30,8 @@ public class ConfiguracionDAO {
                 return new Configuracion(
                         rs.getInt("id"),
                         rs.getString("origen_datos"),
-                        rs.getString("ruta_archivo")
+                        rs.getString("ruta_archivo"),
+                        rs.getString("puerto_com_default")
                 );
 
             }
@@ -45,17 +46,19 @@ public class ConfiguracionDAO {
 
         String sql =
                 "INSERT INTO configuracion " +
-                        "(id, origen_datos, ruta_archivo) " +
+                        "(id, origen_datos, ruta_archivo, puerto_com_default) " +
                         "VALUES (1, ?, ?) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "origen_datos = VALUES(origen_datos), " +
-                        "ruta_archivo = VALUES(ruta_archivo)";
+                        "ruta_archivo = VALUES(ruta_archivo), " +
+                        "puerto_com_default = VALUES(puerto_com_default)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, configuracion.getOrigenDatos());
             ps.setString(2, configuracion.getRutaArchivo());
+            ps.setString(3, configuracion.getPuertoComDefault());
 
             return ps.executeUpdate() > 0;
 
