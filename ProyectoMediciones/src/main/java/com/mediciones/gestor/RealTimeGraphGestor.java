@@ -460,18 +460,24 @@ public class RealTimeGraphGestor {
 
             String nombreArchivo = clienteLimpio + "-" + tagLimpio + "-" + fecha + ".xlsx";
 
-            File archivoDestino = new File(direccion, nombreArchivo);
+            // Armamos la ruta base original
+            File archivoDestinoBase = new File(direccion, nombreArchivo);
 
-            new ExcelGenerator().generarExcel(nombreUltimoArchivoCSV, archivoDestino.getAbsolutePath());
+            // PASO CLAVE: Pasamos la ruta por el validador para que agregue (1), (2)... si ya existe
+            String rutaUnica = obtenerRutaUnica(archivoDestinoBase.getAbsolutePath());
+            File archivoDestinoFinal = new File(rutaUnica);
 
-            view.showMessage("Reporte generado exitosamente en:\n" + archivoDestino.getAbsolutePath());
+            // Generamos el Excel apuntando a la ruta única garantizada
+            new ExcelGenerator().generarExcel(nombreUltimoArchivoCSV, archivoDestinoFinal.getAbsolutePath());
+
+            // Mostramos el mensaje con el nombre final que se le asignó
+            view.showMessage("Reporte generado exitosamente en:\n" + archivoDestinoFinal.getAbsolutePath());
 
         } catch (IOException ex) {
             view.showErrorMessage("Error al generar el reporte Excel: " + ex.getMessage());
             logger.error("Error al generar el reporte Excel: " + ex.getMessage(), ex);
         }
     }
-
     public void recargarPortal() {
         try {
             dao.recargarPortal();
@@ -481,6 +487,43 @@ public class RealTimeGraphGestor {
             view.showErrorMessage("Error al recargar el Portal:\n" + ex.getMessage());
             logger.error("Error al recargar el portal: " + ex.getMessage(), ex);
         }
+    }
+
+
+    /**
+     * Verifica si un archivo ya existe y genera un nombre único agregando (1), (2), etc.
+     */
+    private String obtenerRutaUnica(String rutaCompleta) {
+        java.io.File archivo = new java.io.File(rutaCompleta);
+
+        // Si el archivo no existe, la ruta original está perfecta
+        if (!archivo.exists()) {
+            return rutaCompleta;
+        }
+
+        // Si existe, separamos la ruta, el nombre y la extensión
+        String carpeta = archivo.getParent();
+        String nombreOriginal = archivo.getName();
+        String nombreSinExtension = nombreOriginal;
+        String extension = "";
+
+        int dotIndex = nombreOriginal.lastIndexOf('.');
+        if (dotIndex > 0) {
+            nombreSinExtension = nombreOriginal.substring(0, dotIndex);
+            extension = nombreOriginal.substring(dotIndex);
+        }
+
+        int contador = 1;
+        java.io.File nuevoArchivo;
+
+        // Bucle hasta encontrar un número que no esté en uso
+        do {
+            String nuevoNombre = nombreSinExtension + " (" + contador + ")" + extension;
+            nuevoArchivo = new java.io.File(carpeta, nuevoNombre);
+            contador++;
+        } while (nuevoArchivo.exists());
+
+        return nuevoArchivo.getAbsolutePath();
     }
 
     public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido, JComboBox<TipoValvula> cmbTipoValvula) {
