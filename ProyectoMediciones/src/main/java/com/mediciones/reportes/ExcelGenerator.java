@@ -107,19 +107,28 @@ public class ExcelGenerator {
         escribirPresionAperturaSolicitada();
 
         // 2. GUARDAMOS DIRECTAMENTE EN EL ARCHIVO SOLICITADO
-        // Ya no calculamos ningún nombre nuevo, simplemente usamos "archivoExcel"
         guardarArchivoExcel(archivoExcel);
 
         // 3. ELIMINAR EL CSV TEMPORAL
-        // Una vez que el Excel se guardó correctamente, procedemos a borrar el CSV
         if (csvFile.exists()) {
             boolean eliminado = csvFile.delete();
             if (!eliminado) {
                 System.err.println("Advertencia: No se pudo eliminar el archivo CSV temporal: " + csvFile.getAbsolutePath());
             }
         }
-    }
 
+        // 4. ABRIR AUTOMÁTICAMENTE AL FINALIZAR
+        try {
+            if (archivoExcelFile.exists() && java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().open(archivoExcelFile);
+                logger.info("Reporte Excel abierto automáticamente.");
+            } else {
+                logger.warn("Apertura automática no soportada en este sistema.");
+            }
+        } catch (Exception ex) {
+            logger.error("No se pudo abrir el Excel automáticamente", ex);
+        }
+    }
     private void escribirPresionAperturaSolicitada() {
         if (presionAperturaSolicitada != null) {
             escribirCelda(11, 6, presionAperturaSolicitada.toString());
@@ -331,24 +340,19 @@ public class ExcelGenerator {
         }
     }
 
-    private void agregarDatosCSV(List<Double> x, List<Double> y) {
-        for (int i = 0; i < x.size(); i++) {
-            Row row = sheet.getRow(i + 1);
-            if (row == null) row = sheet.createRow(i + 1);
-            Cell cx = row.createCell(10); cx.setCellValue(x.get(i)); // Columna K
-            Cell cy = row.createCell(11); cy.setCellValue(y.get(i)); // Columna L
-
-            if (presionAperturaSolicitada != null) {
-                Cell cRef = row.createCell(12);
-                cRef.setCellValue(presionAperturaSolicitada);
-            }
+    private void agregarDatosCSV(List<Double> xValues, List<Double> yValues) {
+        // Crea una nueva hoja para los datos
+        XSSFSheet sheetDatos = workbook.getSheet("Datos_Grafico");
+        if (sheetDatos == null) {
+            sheetDatos = workbook.createSheet("Datos_Grafico");
         }
 
-        sheet.setColumnHidden(10, true);
-        sheet.setColumnHidden(11, true);
-        sheet.setColumnHidden(12, true);
-        sheet.setColumnHidden(13, true);
-
+        for (int i = 0; i < xValues.size(); i++) {
+            XSSFRow row = sheetDatos.createRow(i);
+            row.createCell(0).setCellValue(xValues.get(i));
+            row.createCell(1).setCellValue(yValues.get(i));
+            row.createCell(2).setCellValue(presionAperturaSolicitada != null ? presionAperturaSolicitada : 0.0);
+        }
     }
 
     private String obtenerUnidadPresionDesdeCSV(String archivoCSV) throws IOException {
@@ -368,6 +372,12 @@ public class ExcelGenerator {
     private void crearGrafico(List<Double> xValues, List<Double> yValues, String unidadPresion) {
         if (xValues.isEmpty()) return;
 
+        // 1. Buscamos la hoja secundaria donde están los datos limpios
+        XSSFSheet sheetDatos = workbook.getSheet("Datos_Grafico");
+        if (sheetDatos == null) {
+            sheetDatos = sheet; // Fallback de seguridad en caso de que no se haya creado
+        }
+
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
         XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 29, 10, 44);
         XSSFChart chart = drawing.createChart(anchor);
@@ -375,106 +385,101 @@ public class ExcelGenerator {
         chart.setTitleText("Gráfico de Medición");
         chart.setTitleOverlay(false);
 
-        XDDFCategoryAxis xAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+        // --- CONFIGURACIÓN DEL EJE X (TIEMPO) ---
+        // IMPORTANTE: Cambiado a ValueAxis para poder aplicar Zoom numérico
+        XDDFValueAxis xAxis = chart.createValueAxis(AxisPosition.BOTTOM);
         xAxis.setTitle("Tiempo (s)");
+        xAxis.setVisible(true); // Asegura que los números sean visibles
+        xAxis.setMinimum(0.0);
+        xAxis.setMaximum(xValues.get(xValues.size() - 1));
 
+        // --- CONFIGURACIÓN DEL EJE Y (PRESIÓN) ---
         XDDFValueAxis yAxis = chart.createValueAxis(AxisPosition.LEFT);
         yAxis.setTitle(unidadPresion);
+        yAxis.setVisible(true); // Asegura que los números sean visibles
 
-        // --- CENTRADO DINÁMICO DEL EJE Y (ESTILO OSCILOSCOPIO) ---
-        if (presionAperturaSolicitada != null) {
-            double valorObjetivo = presionAperturaSolicitada;
-            double maxDesviacion = 0.0;
+        // --- LÍMITES ESTRICTOS DEL EJE Y (PRESIÓN) ---
+        if (!yValues.isEmpty()) {
+            double minY = yValues.get(0);
+            double maxY = yValues.get(0);
 
-            // 1. Buscamos el pico de presión más alejado de nuestra línea constante
+            // Buscamos el valor más alto y el más bajo de las mediciones reales
             for (Double y : yValues) {
-                double diferencia = Math.abs(y - valorObjetivo);
-                if (diferencia > maxDesviacion) {
-                    maxDesviacion = diferencia;
+                if (y < minY) {
+                    minY = y;
                 }
-            }
-
-            // 2. Aplicamos la misma regla de margen dinámico (mínimo 5 unidades o la desviación + 2)
-            double margenVisual = Math.max(5.0, maxDesviacion + 2.0);
-
-            // 3. Fijamos los límites superior e inferior del gráfico en Excel
-            yAxis.setMinimum(valorObjetivo - margenVisual);
-            yAxis.setMaximum(valorObjetivo + margenVisual);
-
-        } else {
-            // Comportamiento por defecto si no hay presión solicitada
-            double maxY = 0;
-            for (Double y : yValues) {
                 if (y > maxY) {
                     maxY = y;
                 }
             }
-            if (maxY > 0) {
-                yAxis.setMinimum(0.76 * maxY);
-                yAxis.setMaximum(maxY * 1.1); // 10% de aire arriba para que no choque
+
+            // Si existe una presión solicitada, nos aseguramos de que no quede fuera del gráfico
+            // (Opcional: puedes borrar este 'if' si no te importa que la línea azul no se vea
+            // cuando la válvula falla por mucho y no alcanza la presión solicitada).
+            if (presionAperturaSolicitada != null) {
+                if (presionAperturaSolicitada < minY) minY = presionAperturaSolicitada;
+                if (presionAperturaSolicitada > maxY) maxY = presionAperturaSolicitada;
             }
+
+            // Asignamos los límites exactos al Eje Y
+            yAxis.setMinimum(minY);
+            yAxis.setMaximum(maxY);
+
+        } else {
+            // Fallback por si la lista viene vacía
+            yAxis.setMinimum(0.0);
+            yAxis.setMaximum(10.0);
         }
 
-        // Serie principal (Presión)
+        // --- MAPEO DE DATOS A LA HOJA SECUNDARIA ---
+        int numDatos = xValues.size();
+
+        // Serie principal (Presión) apuntando a sheetDatos
+        // Columna 0 = Tiempo, Columna 1 = Presión real
         XDDFDataSource<Double> xs =
                 XDDFDataSourcesFactory.fromNumericCellRange(
-                        sheet,
-                        new CellRangeAddress(1, xValues.size(), 10, 10)); // Columna K
+                        sheetDatos,
+                        new CellRangeAddress(0, numDatos - 1, 0, 0));
 
         XDDFNumericalDataSource<Double> ys =
                 XDDFDataSourcesFactory.fromNumericCellRange(
-                        sheet,
-                        new CellRangeAddress(1, xValues.size(), 11, 11)); // Columna L
+                        sheetDatos,
+                        new CellRangeAddress(0, numDatos - 1, 1, 1));
 
-        XDDFLineChartData data =
-                (XDDFLineChartData) chart.createData(
-                        ChartTypes.LINE,
-                        xAxis,
-                        yAxis);
+        XDDFLineChartData data = (XDDFLineChartData) chart.createData(ChartTypes.LINE, xAxis, yAxis);
 
-        XDDFLineChartData.Series seriePresion =
-                (XDDFLineChartData.Series) data.addSeries(xs, ys);
-
+        XDDFLineChartData.Series seriePresion = (XDDFLineChartData.Series) data.addSeries(xs, ys);
         seriePresion.setTitle("Presión", null);
         seriePresion.setSmooth(false);
         seriePresion.setMarkerStyle(MarkerStyle.NONE);
 
         XDDFLineProperties lineaRoja = new XDDFLineProperties();
-        lineaRoja.setFillProperties(
-                new XDDFSolidFillProperties(
-                        XDDFColor.from(PresetColor.RED)));
-
+        lineaRoja.setFillProperties(new XDDFSolidFillProperties(XDDFColor.from(PresetColor.RED)));
         seriePresion.setLineProperties(lineaRoja);
 
-        // Línea horizontal de presión solicitada sin duplicar filas
+        // Línea horizontal de presión solicitada
         if (presionAperturaSolicitada != null) {
 
-            // Usamos el MISMO rango de Tiempo (Columna 10 / K)
+            // Usamos la misma columna de Tiempo
             XDDFDataSource<Double> xsReferencia =
                     XDDFDataSourcesFactory.fromNumericCellRange(
-                            sheet,
-                            new CellRangeAddress(1, xValues.size(), 10, 10));
+                            sheetDatos,
+                            new CellRangeAddress(0, numDatos - 1, 0, 0));
 
-            // Usamos la nueva columna de Referencia (Columna 12 / M)
+            // Asumimos que la columna 2 (C) de sheetDatos tiene el valor constante guardado
             XDDFNumericalDataSource<Double> ysReferencia =
                     XDDFDataSourcesFactory.fromNumericCellRange(
-                            sheet,
-                            new CellRangeAddress(1, xValues.size(), 12, 12));
+                            sheetDatos,
+                            new CellRangeAddress(0, numDatos - 1, 2, 2));
 
-            XDDFLineChartData.Series serieReferencia =
-                    (XDDFLineChartData.Series) data.addSeries(
-                            xsReferencia,
-                            ysReferencia);
+            XDDFLineChartData.Series serieReferencia = (XDDFLineChartData.Series) data.addSeries(xsReferencia, ysReferencia);
 
             serieReferencia.setTitle("Presión Apertura Solicitada", null);
             serieReferencia.setSmooth(false);
             serieReferencia.setMarkerStyle(MarkerStyle.NONE);
 
             XDDFLineProperties lineaAzul = new XDDFLineProperties();
-            lineaAzul.setFillProperties(
-                    new XDDFSolidFillProperties(
-                            XDDFColor.from(PresetColor.BLUE)));
-
+            lineaAzul.setFillProperties(new XDDFSolidFillProperties(XDDFColor.from(PresetColor.BLUE)));
             serieReferencia.setLineProperties(lineaAzul);
         }
 
