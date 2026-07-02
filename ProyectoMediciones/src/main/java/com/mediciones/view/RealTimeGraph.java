@@ -43,6 +43,12 @@ public class RealTimeGraph extends JFrame {
     private Button3D btnSalir;
     private Button3D btnRecargarPortal;
 
+    //radios buttons
+    private javax.swing.JRadioButton rbtnPSIG;
+    private javax.swing.JRadioButton rbtnKgCm2;
+    private javax.swing.JRadioButton rbtnBarg;
+    private javax.swing.ButtonGroup grupoUnidades;
+
     private int originalWidth = 900;
     private int originalHeight = 750;
 
@@ -68,6 +74,10 @@ public class RealTimeGraph extends JFrame {
         initComponents();
         // NUEVO: Agregamos cmbTipoValvula al inicializador del gestor
         gestor.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido, cmbTipoValvula);
+        gestor.loadRadioButtonsData(rbtnBarg,rbtnKgCm2,rbtnPSIG, grupoUnidades);
+        rbtnKgCm2.addActionListener(e -> updateChartUnit());
+        rbtnBarg.addActionListener(e -> updateChartUnit());
+        rbtnPSIG.addActionListener(e -> updateChartUnit());
         gestor.init();
 
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -217,6 +227,25 @@ public class RealTimeGraph extends JFrame {
         JPanel sensorAndPressurePanel = new JPanel(new GridLayout(1, 2, 10, 0));
         sensorAndPressurePanel.setBorder(BorderFactory.createTitledBorder("Configuración del Sensor"));
 
+        JPanel unidadPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        unidadPanel.setBorder(
+                BorderFactory.createTitledBorder("Elegir Unidad de Medida"));
+
+        grupoUnidades = new ButtonGroup();
+
+        rbtnPSIG = new JRadioButton("PSIG");
+        rbtnKgCm2 = new JRadioButton("Kg/cm²");
+        rbtnBarg = new JRadioButton("Barg");
+
+        grupoUnidades.add(rbtnKgCm2);
+        grupoUnidades.add(rbtnBarg);
+        grupoUnidades.add(rbtnPSIG);
+
+
+        unidadPanel.add(rbtnKgCm2);
+        unidadPanel.add(rbtnBarg);
+        unidadPanel.add(rbtnPSIG);
+
         JPanel pressureRequestedPanel = new JPanel(new BorderLayout());
         pressureRequestedPanel.setBorder(BorderFactory.createTitledBorder("Presión Solicitada"));
         pressureRequestedField = new JTextField();
@@ -224,21 +253,17 @@ public class RealTimeGraph extends JFrame {
 
         ValidadorUI.soloNumeros(pressureRequestedField);
 
-        pressureRequestedField.addActionListener(e -> updatePressureRequestedValue());
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                updatePressureRequestedValue();
             }
 
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                updatePressureRequestedValue();
             }
 
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                updatePressureRequestedValue();
             }
         });
 
@@ -266,6 +291,7 @@ public class RealTimeGraph extends JFrame {
 
         sensorAndPressurePanel.add(pressureRequestedPanel);
         sensorAndPressurePanel.add(sensorPanel);
+        sensorAndPressurePanel.add(unidadPanel);
 
         northCenterPanel.add(sensorAndPressurePanel, BorderLayout.CENTER);
 
@@ -336,26 +362,9 @@ public class RealTimeGraph extends JFrame {
         setupListeners();
     }
 
-    private void updatePressureRequestedValue() {
-        String pressureText = pressureRequestedField.getText().trim().replace(",", ".");
-        if (!pressureText.isEmpty() && !pressureText.equals(".")) {
-            try {
-                double newValue = Double.parseDouble(pressureText);
-                if (newValue > 0) {
-                    gestor.updatePressureRequestedValue(newValue);
-                } else {
-                    showErrorMessage("La Presión Solicitada debe ser mayor que cero.");
-                }
-            } catch (NumberFormatException ignored) {
-            }
-        } else {
-            gestor.updatePressureRequestedValue(0.0);
-        }
-    }
-
     private void initChart() {
-        series = new XYSeries("Presión (" + selectedPressureUnit + ")");
-        chart = ChartFactory.createXYLineChart("", "Tiempo", "Presión (" + selectedPressureUnit + ")",
+        series = new XYSeries("Presión (" + getSelectedPressureUnit() + ")");
+        chart = ChartFactory.createXYLineChart("", "Tiempo", "Presión (" + getSelectedPressureUnit() + ")",
                 new XYSeriesCollection(series), PlotOrientation.VERTICAL, true, true, false);
 
         XYPlot plot = chart.getXYPlot();
@@ -439,8 +448,8 @@ public class RealTimeGraph extends JFrame {
 
                 double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
 
-                //gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
-                gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                //gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
@@ -562,4 +571,36 @@ public class RealTimeGraph extends JFrame {
     public Fluido getSelectedFluido() {
         return (Fluido) cmbFluido.getSelectedItem();
     }
+
+    public void setUnidadSeleccionada(String unidad) {
+        if (unidad != null) {
+            if (unidad.equals("Kg/cm²")) {
+                rbtnKgCm2.setSelected(true);
+            } else if (unidad.equals("Barg")) {
+                rbtnBarg.setSelected(true);
+            } else {
+                rbtnPSIG.setSelected(true);
+            }
+        }
+    }
+
+    public String getUnidadSeleccionada() {
+        if (rbtnKgCm2.isSelected()) return "Kg/cm²";
+        if (rbtnBarg.isSelected()) return "Barg";
+        return "PSIG";
+    }
+
+    private void updateChartUnit() {
+        String unidad = getUnidadSeleccionada();
+
+        selectedPressureUnit = unidad;
+
+        series.setKey("Presión (" + unidad + ")");
+
+        XYPlot plot = chart.getXYPlot();
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setLabel("Presión (" + unidad + ")");
+    }
+
+
 }

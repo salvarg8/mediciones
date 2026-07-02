@@ -62,7 +62,7 @@ public final class DatabaseManager {
         }
 
         if (!loaded) {
-            System.out.println("⚠️ No se encontró " + CONFIG_FILE + ". Usando valores por defecto/entorno.");
+            System.out.println("No se encontró " + CONFIG_FILE + ". Usando valores por defecto/entorno.");
         }
 
         host = getConfigValue(props, "db.host", "DB_HOST", DEFAULT_HOST);
@@ -97,7 +97,7 @@ public final class DatabaseManager {
             System.out.println("✅ Configuración cargada desde archivo externo: " + externalFile.getAbsolutePath());
             return true;
         } catch (IOException ex) {
-            logger.error("⚠️ Error al cargar " + CONFIG_FILE + " externo: " + ex.getMessage(), ex);
+            logger.error("Error al cargar " + CONFIG_FILE + " externo: " + ex.getMessage(), ex);
             return false;
         }
     }
