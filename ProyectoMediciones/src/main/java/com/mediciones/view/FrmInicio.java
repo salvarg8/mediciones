@@ -342,7 +342,11 @@ public class FrmInicio extends JFrame implements ActionListener {
         else if (source == btnTiposValvula) f = new FrmTipoValvulaCRUD();
         else if (source == btnConfiguracion) f = new FrmConfiguracion();
         else if (source == btnCalibracion) f = new FrmCalibracionSensor();
-        else if (source == btnMedicion) f = RealTimeGraph.getInstance();
+        else if (source == btnMedicion) {
+            RealTimeGraph graph = RealTimeGraph.getInstance();
+            graph.setUnidadSeleccionada(getUnidadSeleccionada());
+            f = graph;
+        }
 
         if (f != null) {
             f.setLocationRelativeTo(this);
@@ -355,6 +359,12 @@ public class FrmInicio extends JFrame implements ActionListener {
             });
             f.setVisible(true);
         }
+    }
+
+    public String getUnidadSeleccionada() {
+        if (rbKgCm2.isSelected()) return "Kg/cm²";
+        if (rbLbIn2.isSelected()) return "Barg";
+        return "PSIG";
     }
 
     public static void main(String[] args) {

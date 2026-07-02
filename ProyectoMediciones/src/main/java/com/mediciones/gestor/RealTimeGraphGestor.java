@@ -10,14 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import java.awt.Color;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -26,18 +24,16 @@ public class RealTimeGraphGestor {
     private final RealTimeGraphDAO dao;
     private final UbicacionGestor ubicacionGestor;
     private final ValvulaGestor valvulaGestor;
-    private final TipoValvulaGestor tipoValvulaGestor; // NUEVO: Gestor de Tipos
+    private final TipoValvulaGestor tipoValvulaGestor;
     private ConfiguracionDAO configDAO;
 
     private SerialPort comPort;
     private volatile boolean running = false;
     private Thread dataThread;
 
-    private final List<String> csvDataPoints = Collections.synchronizedList(new ArrayList<>());
     private double maxValue = 0;
     private double recValue = Double.MAX_VALUE;
     private boolean maxReached = false;
-    private String nombreUltimoArchivoCSV;
 
     private double factorA = 1.0;
     private double constanteC = 0.0;
@@ -46,6 +42,8 @@ public class RealTimeGraphGestor {
     private String selectedSensorType = "Motorola";
     private double pressureRequested = 0.0;
 
+    private Medicion medicionActual;
+
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphGestor.class);
 
     public RealTimeGraphGestor(RealTimeGraph view) {
@@ -53,7 +51,7 @@ public class RealTimeGraphGestor {
         this.dao = new RealTimeGraphDAO();
         this.ubicacionGestor = new UbicacionGestor();
         this.valvulaGestor = new ValvulaGestor();
-        this.tipoValvulaGestor = new TipoValvulaGestor(); // NUEVO: Inicialización
+        this.tipoValvulaGestor = new TipoValvulaGestor();
         this.configDAO = new ConfiguracionDAO();
     }
 
@@ -65,10 +63,8 @@ public class RealTimeGraphGestor {
         SerialPort[] ports = SerialPort.getCommPorts();
         if (ports.length == 0) return;
 
-        // 1. Obtenemos el puerto guardado en la base de datos
         Configuracion config = configDAO.obtenerConfiguracion();
         String puertoFavorito = (config != null) ? config.getPuertoComDefault() : null;
-
         int selectedIndex = -1;
 
         if (puertoFavorito != null && !puertoFavorito.trim().isEmpty()) {
@@ -81,7 +77,6 @@ public class RealTimeGraphGestor {
             }
         }
 
-        // 3. Si no tenía puerto guardado (o el cable no está), usamos la lógica automática
         if (selectedIndex == -1) {
             for (int i = 0; i < ports.length; i++) {
                 String name = ports[i].getDescriptivePortName().toLowerCase();
@@ -92,13 +87,11 @@ public class RealTimeGraphGestor {
             }
         }
 
-        // 4. Si fallan ambas, seleccionamos el último de la lista como fallback
         if (selectedIndex == -1) {
             selectedIndex = ports.length - 1;
         }
 
         portCombo.setSelectedIndex(selectedIndex);
-        // openSelectedPort(ports[selectedIndex]); // Descomenta esta línea si abrías el puerto automáticamente al iniciar
     }
 
     private void openSelectedPort(SerialPort port) {
@@ -143,7 +136,7 @@ public class RealTimeGraphGestor {
             } else {
                 factorATemp = 1.0;
                 constanteCTemp = 0.0;
-                System.err.println("⚠️ Advertencia: No se encontró calibración para LM35. Usando a=1.0, c=0.0");
+                System.err.println("Advertencia: No se encontró calibración para LM35. Usando a=1.0, c=0.0");
             }
 
             if (factorA == 0) factorA = 1.0;
@@ -168,7 +161,6 @@ public class RealTimeGraphGestor {
         maxValue = 0;
         recValue = Double.MAX_VALUE;
         maxReached = false;
-        csvDataPoints.clear();
         running = false;
         view.resetIndicators();
     }
@@ -179,6 +171,15 @@ public class RealTimeGraphGestor {
 
     public void startDataCapture(JComboBox<String> portCombo, JComboBox<Integer> baudCombo,
                                  Cliente cliente, Valvula valvula, double currentPressureRequested) {
+
+        medicionActual = new Medicion(
+                valvula,
+                cliente,
+                view.getSelectedOperador(),
+                view.getSelectedFluido(),
+                currentPressureRequested,
+                view.getUnidadSeleccionada()
+        );
 
         if (dataThread != null && dataThread.isAlive()) {
             return;
@@ -203,14 +204,6 @@ public class RealTimeGraphGestor {
                 comPort.readBytes(new byte[comPort.bytesAvailable()], comPort.bytesAvailable());
             }
 
-            String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-            String fileName = cliente.getNombre().replace(" ", "-") + "-"
-                    + valvula.getTag().replace(" ", "-") + "-" + timestamp + ".csv";
-            Ubicacion u = ubicacionGestor.obtenerUbicacion();
-            nombreUltimoArchivoCSV = (u != null && u.getUbicacion() != null)
-                    ? new File(new File(u.getUbicacion()), fileName).getAbsolutePath()
-                    : fileName;
-
             resetValues();
             view.clearChart();
 
@@ -223,13 +216,11 @@ public class RealTimeGraphGestor {
                 String mensajeDesconexion = "Error desconocido en los sensores.";
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(comPort.getInputStream(), StandardCharsets.UTF_8))) {
-                    // Guardamos el momento exacto en el que inicia la captura
                     long ultimoDatoTime = System.currentTimeMillis();
 
                     while (comPort.isOpen() && !Thread.currentThread().isInterrupted()) {
                         int bytesDisponibles = comPort.bytesAvailable();
 
-                        // CASO 1: Desconexión física instantánea (jSerialComm retorna -1 si se desenchufa el USB)
                         if (bytesDisponibles < 0) {
                             throw new IOException("Se desconectó físicamente el cable USB del banco de pruebas.");
                         }
@@ -238,13 +229,11 @@ public class RealTimeGraphGestor {
                             String d = reader.readLine();
                             if (d != null) {
                                 processNewData(d);
-                                ultimoDatoTime = System.currentTimeMillis(); // Reseteamos el temporizador si llegaron datos
+                                ultimoDatoTime = System.currentTimeMillis();
                             }
                         } else {
-                            // CASO 2: El cable sigue enchufado pero el microcontrolador dejó de transmitir datos (se colgó)
-                            // Si pasan más de 2000 milisegundos (2 segundos) sin recibir nada, asumimos pérdida de señal
-                            if (System.currentTimeMillis() - ultimoDatoTime > 2000) {
-                                throw new IOException("Se perdió la señal del sensor. El dispositivo no responde (Timeout de 2s).");
+                            if (System.currentTimeMillis() - ultimoDatoTime > 20000) {
+                                throw new IOException("Se perdió la señal del sensor. El dispositivo no responde (Timeout de 20s).");
                             }
                         }
                         Thread.sleep(50);
@@ -256,29 +245,22 @@ public class RealTimeGraphGestor {
                     porDesconexion = true;
                     mensajeDesconexion = "Error crítico detectado en la lectura del puerto serial";
                 } finally {
-                    // Si el hilo terminó debido a una desconexión abrupta/error, actualizamos la UI
                     if (porDesconexion) {
                         final String msgPopUp = mensajeDesconexion;
                         SwingUtilities.invokeLater(() -> {
-                            view.setLedColor(Color.RED); // Cambiamos el indicador visual a ROJO
-                            view.showErrorMessage("⚠️ Alerta de Hardware:\n" + msgPopUp); // Lanzamos el cartel de alerta
+                            view.setLedColor(Color.RED);
+                            view.showErrorMessage("Alerta de Hardware:\n" + msgPopUp);
                         });
                     }
-
-                    // Aseguramos que la interfaz vuelva a su estado original de todas formas
                     stopDataCapture(valvula, view.getSelectedOperador(), view.getSelectedFluido());
                 }
             });
             dataThread.start();
 
-            if (!comPort.openPort()) throw new IOException("No se pudo abrir el puerto.");
-            view.setLedColor(Color.GREEN);
-
             Configuracion config = configDAO.obtenerConfiguracion();
             if (config == null) config = new Configuracion();
             config.setPuertoComDefault(comPort.getSystemPortName());
             configDAO.guardarConfiguracion(config);
-
 
         } catch (Exception ex) {
             logger.error("error al iniciar la captura. startDataCapture()", ex);
@@ -329,9 +311,12 @@ public class RealTimeGraphGestor {
                         }
 
                         view.updateTempValue(finalT);
-
                         view.addChartPoint(tiempo, finalP);
-                        csvDataPoints.add(String.format("%.1f;%.2f;%.2f", tiempo, finalP, finalT).replace(",", "."));
+
+                        // Llenado EXCLUSIVO a través de la entidad Medicion
+                        if (medicionActual != null) {
+                            medicionActual.agregarPunto(tiempo, finalP);
+                        }
                     }
                 });
             }
@@ -341,97 +326,19 @@ public class RealTimeGraphGestor {
 
     public void stopDataCapture(Valvula valvula, Operador operador, Fluido fluido) {
         running = false;
-
         if (dataThread != null && dataThread.isAlive()) {
             dataThread.interrupt();
         }
-
-        // 1. SOLUCIÓN AL BUG: Tomar una copia segura y rápida de la lista.
-        // Bloqueamos csvDataPoints solo un instante para copiarla sin que el hilo serial interfiera.
-        List<String> copiaDatos;
-        synchronized (csvDataPoints) {
-            copiaDatos = new ArrayList<>(csvDataPoints);
-        }
-
-        // 2. A partir de aquí, usamos "copiaDatos" en lugar de "csvDataPoints"
-        if (copiaDatos.isEmpty()) {
-            view.resetCaptureUI();
-            return;
-        }
-
-        double minPressure = 0.76 * pressureRequested;
-        int startIndex = -1;
-        double startTime = 0;
-
-        // Iteramos sobre la copia de forma 100% segura
-        for (int i = 0; i < copiaDatos.size(); i++) {
-            try {
-                String[] parts = copiaDatos.get(i).split(";");
-                if (parts.length >= 2) {
-                    double pressure = Double.parseDouble(parts[1]);
-                    if (pressure >= minPressure) {
-                        startIndex = i;
-                        startTime = Double.parseDouble(parts[0]);
-                        break;
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        if (startIndex == -1) {
-            startIndex = 0;
-            try {
-                String[] parts = copiaDatos.get(0).split(";");
-                if (parts.length >= 1) {
-                    startTime = Double.parseDouble(parts[0]);
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Ya no necesitamos sincronizar esta lista porque es totalmente local
-        List<String> filteredDataPoints = new ArrayList<>();
-        for (int i = startIndex; i < copiaDatos.size(); i++) {
-            try {
-                String[] parts = copiaDatos.get(i).split(";");
-                if (parts.length >= 3) {
-                    double time = Double.parseDouble(parts[0]);
-                    double pressure = Double.parseDouble(parts[1]);
-                    double temperature = Double.parseDouble(parts[2]);
-                    double adjustedTime = time - startTime;
-                    filteredDataPoints.add(String.format(java.util.Locale.US, "%.1f;%.2f;%.2f", adjustedTime, pressure, temperature));
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        if (valvula != null && operador != null && fluido != null) {
-            try (Writer writer = new OutputStreamWriter(Files.newOutputStream(Paths.get(nombreUltimoArchivoCSV)), StandardCharsets.UTF_8)) {
-                writer.write("\uFEFF");
-                writer.write("Valvula ID;" + valvula.getId() + "\n");
-                writer.write("Valvula TAG;" + valvula.getTag() + "\n");
-                writer.write("Operador;" + operador.getNombre() + "\n");
-                writer.write("Fluido;" + fluido.getNombre() + "\n");
-                writer.write("Presión;" + pressureRequested + "\n");
-                writer.write("Maximo;" + String.format(java.util.Locale.US, "%.2f", maxValue) + "\n");
-                writer.write("Recuperacion;" + ((recValue == Double.MAX_VALUE || !maxReached) ? "0.00" : String.format(java.util.Locale.US, "%.2f", recValue)) + "\n");
-                writer.write("\ntiempo_s;Presion (" + view.getSelectedPressureUnit() + ");temperatura\n");
-
-                // Borramos el "synchronized (filteredDataPoints)" que era inútil
-                for (String p : filteredDataPoints) {
-                    writer.write(p + "\n");
-                }
-            } catch (IOException ignored) {
-            }
-        }
-
         view.resetCaptureUI();
     }
 
     public void guardarExcel(Cliente cliente, Valvula valvula, Operador operador, Fluido fluido) {
         if (valvula == null || operador == null || fluido == null) {
             view.showErrorMessage("Debe seleccionar Válvula, Operador y Fluido.");
+            return;
+        }
+        if (this.medicionActual == null || this.medicionActual.getValoresMedicion().isEmpty()) {
+            view.showErrorMessage("No hay ninguna medición activa o finalizada con datos para exportar.");
             return;
         }
 
@@ -450,7 +357,7 @@ public class RealTimeGraphGestor {
             if (ubicacion != null && ubicacion.getUbicacion() != null) {
                 direccion = ubicacion.getUbicacion();
             } else {
-                direccion = javax.swing.filechooser.FileSystemView.getFileSystemView().getDefaultDirectory().getPath();
+                direccion = FileSystemView.getFileSystemView().getDefaultDirectory().getPath();
             }
 
             String fecha = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
@@ -460,24 +367,28 @@ public class RealTimeGraphGestor {
 
             String nombreArchivo = clienteLimpio + "-" + tagLimpio + "-" + fecha + ".xlsx";
 
-            // Armamos la ruta base original
             File archivoDestinoBase = new File(direccion, nombreArchivo);
-
-            // PASO CLAVE: Pasamos la ruta por el validador para que agregue (1), (2)... si ya existe
             String rutaUnica = obtenerRutaUnica(archivoDestinoBase.getAbsolutePath());
             File archivoDestinoFinal = new File(rutaUnica);
 
-            // Generamos el Excel apuntando a la ruta única garantizada
-            new ExcelGenerator().generarExcel(nombreUltimoArchivoCSV, archivoDestinoFinal.getAbsolutePath());
+            new ExcelGenerator().generarExcel(this.medicionActual, archivoDestinoFinal.getAbsolutePath());
 
-            // Mostramos el mensaje con el nombre final que se le asignó
             view.showMessage("Reporte generado exitosamente en:\n" + archivoDestinoFinal.getAbsolutePath());
+
+            try {
+                if (java.awt.Desktop.isDesktopSupported()) {
+                    java.awt.Desktop.getDesktop().open(archivoDestinoFinal);
+                }
+            } catch (Exception e) {
+                logger.error("No se pudo abrir el archivo automáticamente: " + e.getMessage());
+            }
 
         } catch (IOException ex) {
             view.showErrorMessage("Error al generar el reporte Excel: " + ex.getMessage());
             logger.error("Error al generar el reporte Excel: " + ex.getMessage(), ex);
         }
     }
+
     public void recargarPortal() {
         try {
             dao.recargarPortal();
@@ -489,19 +400,13 @@ public class RealTimeGraphGestor {
         }
     }
 
-
-    /**
-     * Verifica si un archivo ya existe y genera un nombre único agregando (1), (2), etc.
-     */
     private String obtenerRutaUnica(String rutaCompleta) {
         java.io.File archivo = new java.io.File(rutaCompleta);
 
-        // Si el archivo no existe, la ruta original está perfecta
         if (!archivo.exists()) {
             return rutaCompleta;
         }
 
-        // Si existe, separamos la ruta, el nombre y la extensión
         String carpeta = archivo.getParent();
         String nombreOriginal = archivo.getName();
         String nombreSinExtension = nombreOriginal;
@@ -516,7 +421,6 @@ public class RealTimeGraphGestor {
         int contador = 1;
         java.io.File nuevoArchivo;
 
-        // Bucle hasta encontrar un número que no esté en uso
         do {
             String nuevoNombre = nombreSinExtension + " (" + contador + ")" + extension;
             nuevoArchivo = new java.io.File(carpeta, nuevoNombre);
@@ -546,7 +450,6 @@ public class RealTimeGraphGestor {
         if (planta != null && planta.getValvulas() != null) {
             cmbTipo.addItem(new TipoValvula(0, "Todos los tipos"));
 
-            // Usamos un Map para guardar los tipos únicos (evitando duplicados por ID)
             java.util.Map<Integer, TipoValvula> tiposUnicos = new java.util.HashMap<>();
 
             for (Valvula v : planta.getValvulas()) {
@@ -555,7 +458,6 @@ public class RealTimeGraphGestor {
                 }
             }
 
-            // Convertimos a lista y ordenamos alfabéticamente
             java.util.List<TipoValvula> listaTipos = new java.util.ArrayList<>(tiposUnicos.values());
             listaTipos.sort((t1, t2) -> {
                 String n1 = t1.getNombre() == null ? "" : t1.getNombre();
@@ -563,7 +465,6 @@ public class RealTimeGraphGestor {
                 return n1.compareToIgnoreCase(n2);
             });
 
-            // Agregamos al combobox
             for (TipoValvula tv : listaTipos) {
                 cmbTipo.addItem(tv);
             }
@@ -584,7 +485,7 @@ public class RealTimeGraphGestor {
 
     public void discardData() {
         if (isRunning()) {
-            stopDataCapture(null, null, null); // Stop but don't save
+            stopDataCapture(null, null, null);
         }
         resetValues();
         view.clearChart();
@@ -597,6 +498,15 @@ public class RealTimeGraphGestor {
             return;
         }
 
+        medicionActual = new Medicion(
+                valvula,
+                cliente,
+                view.getSelectedOperador(),
+                view.getSelectedFluido(),
+                currentPressureRequested,
+                view.getSelectedPressureUnit()
+        );
+
         if (currentPressureRequested <= 0) {
             view.showErrorMessage("Ingrese un valor válido para la Presión Solicitada antes de iniciar la simulación.");
             return;
@@ -605,18 +515,7 @@ public class RealTimeGraphGestor {
         this.pressureRequested = currentPressureRequested;
 
         try {
-            // Indicador visual para saber que estás en simulación
             view.setLedColor(Color.ORANGE);
-
-            String timestamp = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-            // Le agrego "-SIMULADO-" al nombre del archivo para no confundirlo con mediciones reales
-            String fileName = cliente.getNombre().replace(" ", "-") + "-"
-                    + valvula.getTag().replace(" ", "-") + "-SIMULADO-" + timestamp + ".csv";
-
-            Ubicacion u = ubicacionGestor.obtenerUbicacion();
-            nombreUltimoArchivoCSV = (u != null && u.getUbicacion() != null)
-                    ? new File(new File(u.getUbicacion()), fileName).getAbsolutePath()
-                    : fileName;
 
             resetValues();
             view.clearChart();
@@ -628,31 +527,26 @@ public class RealTimeGraphGestor {
             dataThread = new Thread(() -> {
                 try {
                     double simulatedTime = 0.0;
-                    double simulatedVolt = constanteC; // Empieza en voltaje base para que Presión sea 0
+                    double simulatedVolt = constanteC;
 
-                    // Calculamos el voltaje objetivo para superar el 100% de la presión solicitada
                     double targetVolt = (pressureRequested / factorA) + constanteC + 0.2;
 
                     while (!Thread.currentThread().isInterrupted()) {
-                        // Curva de subida de presión
                         if (simulatedVolt < targetVolt) {
                             simulatedVolt += 0.02 + (Math.random() * 0.01);
                         } else {
-                            // Fluctuación leve una vez que alcanza el máximo
                             simulatedVolt += (Math.random() * 0.02) - 0.01;
                         }
 
-                        // Temperatura simulada oscilando entre 24 y 26 grados
                         double tempRaw = (25.0 / factorATemp) + constanteCTemp + (Math.random() * 2.0 - 1.0);
 
-                        // String idéntico al que enviaría el microcontrolador
                         String simulatedData = String.format(java.util.Locale.US, "%.1f,%.4f,%.4f,%.2f",
                                 simulatedTime, simulatedVolt, simulatedVolt, tempRaw);
 
                         processNewData(simulatedData);
 
-                        simulatedTime += 0.1; // Avanzamos el tiempo simulado
-                        Thread.sleep(100);    // Pausa real del hilo (100ms)
+                        simulatedTime += 0.1;
+                        Thread.sleep(100);
                     }
                 } catch (InterruptedException e) {
                     logger.info("Hilo de simulación detenido.");
@@ -671,7 +565,6 @@ public class RealTimeGraphGestor {
         }
     }
 
-    // NUEVO: Método para actualizar Válvulas Filtradas con ORDENAMIENTO INCLUIDO
     public void updateValvulasFiltradas(JComboBox<Valvula> cmbValvula, Planta planta, TipoValvula tipoFiltro) {
         if (planta == null || cmbValvula == null) return;
 
@@ -679,7 +572,6 @@ public class RealTimeGraphGestor {
         cmbValvula.removeAllItems();
 
         if (valvulas != null) {
-            // Creamos una copia para ordenarlas por Tag alfabéticamente
             List<Valvula> valvulasOrdenadas = new ArrayList<>(valvulas);
             valvulasOrdenadas.sort((v1, v2) -> {
                 String tag1 = v1.getTag() == null ? "" : v1.getTag();
@@ -688,7 +580,6 @@ public class RealTimeGraphGestor {
             });
 
             for (Valvula v : valvulasOrdenadas) {
-                // Si el filtro es nulo, es 0 ("Todos los tipos"), o coincide con el de la válvula
                 if (tipoFiltro == null || tipoFiltro.getId() == 0 ||
                         (v.getTipoValvula() != null && v.getTipoValvula().getId().equals(tipoFiltro.getId()))) {
                     cmbValvula.addItem(v);
@@ -733,8 +624,19 @@ public class RealTimeGraphGestor {
             return nombre1.compareToIgnoreCase(nombre2);
         });
 
-        for (Planta planta : plantasDeCliente){ {
+        for (Planta planta : plantasDeCliente) {
             cmbPlanta.addItem(planta);
-        }}
+        }
+    }
+
+    public void loadRadioButtonsData(JRadioButton rbtnBarg, JRadioButton rbtnKgCm2, JRadioButton rbtnPSIG, ButtonGroup grupoUnidades) {
+        rbtnPSIG = new javax.swing.JRadioButton("PSIG");
+        rbtnKgCm2 = new javax.swing.JRadioButton("Kg/cm²");
+        rbtnBarg = new javax.swing.JRadioButton("Barg");
+
+        grupoUnidades = new javax.swing.ButtonGroup();
+        grupoUnidades.add(rbtnPSIG);
+        grupoUnidades.add(rbtnKgCm2);
+        grupoUnidades.add(rbtnBarg);
     }
 }

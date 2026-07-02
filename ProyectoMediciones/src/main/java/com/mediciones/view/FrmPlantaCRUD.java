@@ -451,7 +451,7 @@ public class FrmPlantaCRUD extends JDialog {
                 String mensaje;
 
                 if (cantidadValvulas > 0) {
-                    mensaje = "⚠️ ATENCIÓN: La planta '" + nombrePlanta + "' tiene " + cantidadValvulas +
+                    mensaje = "ATENCIÓN: La planta '" + nombrePlanta + "' tiene " + cantidadValvulas +
                             " válvula(s) activa(s) asociada(s).\n\nSi continúa, se eliminará la planta Y TODAS sus válvulas en cascada.\n\n¿Desea continuar?";
                 } else {
                     mensaje = "¿Está seguro de que desea eliminar la planta: " + nombrePlanta + " (ID: " + idPlanta + ")?";
