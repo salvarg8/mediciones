@@ -36,14 +36,14 @@ public class RealTimeGraph extends JFrame {
     private Button3D startStopButton, generateReportButton, returnButton;
     private JComboBox<Cliente> cmbCliente;
     private JComboBox<Planta> cmbPlanta;
-    private JComboBox<TipoValvula> cmbTipoValvula; // NUEVO: Combo de Tipo de Válvula
+    private JComboBox<TipoValvula> cmbTipoValvula;
     private JComboBox<Valvula> cmbValvula;
     private JComboBox<Operador> cmbOperador;
     private JComboBox<Fluido> cmbFluido;
     private Button3D btnSalir;
     private Button3D btnRecargarPortal;
 
-    //radios buttons
+    // radios buttons
     private javax.swing.JRadioButton rbtnPSIG;
     private javax.swing.JRadioButton rbtnKgCm2;
     private javax.swing.JRadioButton rbtnBarg;
@@ -60,6 +60,8 @@ public class RealTimeGraph extends JFrame {
 
     private JTextField pressureRequestedField;
 
+    // Componentes para la escala de tiempo
+    private JSlider sliderEscalaTiempo;
 
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraph.class);
 
@@ -72,9 +74,8 @@ public class RealTimeGraph extends JFrame {
         setLayout(new BorderLayout(10, 10));
 
         initComponents();
-        // NUEVO: Agregamos cmbTipoValvula al inicializador del gestor
         gestor.loadComboBoxData(cmbCliente, cmbOperador, cmbFluido, cmbTipoValvula);
-        gestor.loadRadioButtonsData(rbtnBarg,rbtnKgCm2,rbtnPSIG, grupoUnidades);
+        gestor.loadRadioButtonsData(rbtnBarg, rbtnKgCm2, rbtnPSIG, grupoUnidades);
         rbtnKgCm2.addActionListener(e -> updateChartUnit());
         rbtnBarg.addActionListener(e -> updateChartUnit());
         rbtnPSIG.addActionListener(e -> updateChartUnit());
@@ -120,7 +121,6 @@ public class RealTimeGraph extends JFrame {
         Font labelFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int) (12 * scaleFactor)));
         Font indicatorTitleFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int) (12 * scaleFactor)));
 
-        // 1. FUENTE GIGANTE
         Font indicatorValueFont = new Font("Consolas", Font.BOLD, Math.max(80, (int) (50 * scaleFactor)));
 
         if (northPanel != null && northPanel.getBorder() instanceof TitledBorder) {
@@ -155,10 +155,8 @@ public class RealTimeGraph extends JFrame {
         if (portCombo != null) portCombo.setFont(comboBoxFont);
         if (baudCombo != null) baudCombo.setFont(comboBoxFont);
 
-        // 2. LA "BARREDORA" QUE ACHICABA LOS TEXTOS
         adjustLabelFontsInContainer(getContentPane(), labelFont);
 
-        // 3. NUESTRO ESCUDO: Volvemos a hacer gigantes los números AL FINAL
         if (valueLabel != null) valueLabel.setFont(indicatorValueFont);
         if (maxLabel != null) maxLabel.setFont(indicatorValueFont);
         if (recLabel != null) recLabel.setFont(indicatorValueFont);
@@ -201,7 +199,6 @@ public class RealTimeGraph extends JFrame {
         plantaPanel.add(cmbPlanta, BorderLayout.CENTER);
         valvulaSeleccionadaPanel.add(plantaPanel);
 
-        // NUEVO: Panel de Tipo de Válvula reemplaza el espacio vacío
         JPanel tipoValvulaPanel = new JPanel(new BorderLayout(5, 0));
         tipoValvulaPanel.add(new JLabel("Tipo Válvula:"), BorderLayout.WEST);
         cmbTipoValvula = new JComboBox<>();
@@ -228,12 +225,15 @@ public class RealTimeGraph extends JFrame {
 
         northCenterPanel.add(valvulaSeleccionadaPanel, BorderLayout.NORTH);
 
-        JPanel sensorAndPressurePanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        // Panel de configuración general (reducido el vgap a 0)
+        JPanel sensorAndPressurePanel = new JPanel(new GridLayout(1, 4, 10, 0));
         sensorAndPressurePanel.setBorder(BorderFactory.createTitledBorder("Configuración del Sensor"));
+        // MEJORA: Forzamos una altura preferida compacta (75px) para que no se estire hacia abajo
+        sensorAndPressurePanel.setPreferredSize(new Dimension(900, 75));
 
-        JPanel unidadPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-        unidadPanel.setBorder(
-                BorderFactory.createTitledBorder("Elegir Unidad de Medida"));
+        // MEJORA: Reducido el margen vertical interno (vgap) de 10 a 3
+        JPanel unidadPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 3));
+        unidadPanel.setBorder(BorderFactory.createTitledBorder("Elegir Unidad de Medida"));
 
         grupoUnidades = new ButtonGroup();
 
@@ -244,7 +244,6 @@ public class RealTimeGraph extends JFrame {
         grupoUnidades.add(rbtnKgCm2);
         grupoUnidades.add(rbtnBarg);
         grupoUnidades.add(rbtnPSIG);
-
 
         unidadPanel.add(rbtnKgCm2);
         unidadPanel.add(rbtnBarg);
@@ -259,16 +258,11 @@ public class RealTimeGraph extends JFrame {
 
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-            }
-
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {}
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-            }
-
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {}
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-            }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
         });
 
         pressureRequestedPanel.add(pressureRequestedField, BorderLayout.CENTER);
@@ -276,7 +270,8 @@ public class RealTimeGraph extends JFrame {
         JPanel sensorPanel = new JPanel(new GridBagLayout());
         sensorPanel.setBorder(BorderFactory.createTitledBorder("Elegir Sensor de Presión"));
         GridBagConstraints gbcSensor = new GridBagConstraints();
-        gbcSensor.insets = new Insets(5, 5, 5, 5);
+
+        gbcSensor.insets = new Insets(2, 5, 5, 5);
         gbcSensor.fill = GridBagConstraints.HORIZONTAL;
         String[] sensores = {"Motorola (0-7 Bar)", "Endress-Hauser (0-100 Bar)"};
         cmbSensor = new JComboBox<>(sensores);
@@ -293,9 +288,26 @@ public class RealTimeGraph extends JFrame {
             }
         });
 
+        // --- MEJORA: PANEL DE ESCALA DE TIEMPO COMPACTO ---
+        JPanel panelTiempo = new JPanel(new BorderLayout(0, 2));
+        panelTiempo.setBorder(BorderFactory.createTitledBorder("Escala de Gráfico (s)"));
+
+        sliderEscalaTiempo = new JSlider(JSlider.HORIZONTAL, 10, 300, 60);
+        sliderEscalaTiempo.setPaintTicks(true);
+        sliderEscalaTiempo.setPaintLabels(true);
+
+
+        sliderEscalaTiempo.addChangeListener(e -> {
+            int segundos = sliderEscalaTiempo.getValue();
+            ajustarEscalaTiempo(segundos);
+        });
+
+        panelTiempo.add(sliderEscalaTiempo, BorderLayout.CENTER);
+
         sensorAndPressurePanel.add(pressureRequestedPanel);
         sensorAndPressurePanel.add(sensorPanel);
         sensorAndPressurePanel.add(unidadPanel);
+        sensorAndPressurePanel.add(panelTiempo);
 
         northCenterPanel.add(sensorAndPressurePanel, BorderLayout.CENTER);
 
@@ -377,7 +389,30 @@ public class RealTimeGraph extends JFrame {
         rangeAxis.setLowerBound(0);
         rangeAxis.setUpperBound(10);
 
+        ajustarEscalaTiempo(60);
+
         add(new ChartPanel(chart), BorderLayout.CENTER);
+    }
+
+    private void ajustarEscalaTiempo(int segundos) {
+        if (chart != null) {
+            XYPlot plot = chart.getXYPlot();
+            NumberAxis domainAxis = (NumberAxis) plot.getDomainAxis();
+            domainAxis.setAutoRange(false);
+
+            double currentTime = 0;
+            if (series != null && !series.isEmpty()) {
+                currentTime = series.getMaxX();
+            }
+
+            if (currentTime > segundos) {
+                domainAxis.setLowerBound(currentTime - segundos);
+                domainAxis.setUpperBound(currentTime);
+            } else {
+                domainAxis.setLowerBound(0);
+                domainAxis.setUpperBound(segundos);
+            }
+        }
     }
 
     private JPanel createIndicatorPanel(String title, JLabel label, Font font, Color foreground) {
@@ -388,13 +423,10 @@ public class RealTimeGraph extends JFrame {
         label.setFont(font);
         label.setForeground(foreground);
         panel.add(label, BorderLayout.CENTER);
-
-        // Eliminamos el preferredSize fijo para que se ajuste a la fuente gigante sola
         return panel;
     }
 
     private void setupListeners() {
-        // 1. Al cambiar Cliente -> Cargamos Plantas
         cmbCliente.addActionListener(e -> {
             Object selected = cmbCliente.getSelectedItem();
             if (selected instanceof Cliente) {
@@ -406,7 +438,6 @@ public class RealTimeGraph extends JFrame {
             }
         });
 
-        // 2. Al cambiar Planta -> Cargamos Tipos presentes en ESA planta
         cmbPlanta.addActionListener(e -> {
             Object selected = cmbPlanta.getSelectedItem();
             if (selected instanceof Planta) {
@@ -417,7 +448,6 @@ public class RealTimeGraph extends JFrame {
             }
         });
 
-        // 3. Al cambiar Tipo de Válvula -> Filtramos Válvulas finales
         if (cmbTipoValvula != null) {
             cmbTipoValvula.addActionListener(e -> filtrarValvulas());
         }
@@ -425,7 +455,6 @@ public class RealTimeGraph extends JFrame {
         startStopButton.addActionListener(e -> {
             if (!gestor.isRunning()) {
 
-                // 1. VALIDACIÓN LÓGICA: Comprobar número válido y campos obligatorios
                 if (!ValidadorUI.esNumeroValido(pressureRequestedField, "Presión Solicitada", this)) {
                     return;
                 }
@@ -517,10 +546,18 @@ public class RealTimeGraph extends JFrame {
     public void setInfoFieldsEnabled(boolean enabled) {
         cmbCliente.setEnabled(enabled);
         cmbPlanta.setEnabled(enabled);
-        if (cmbTipoValvula != null) cmbTipoValvula.setEnabled(enabled); // NUEVO
+        if (cmbTipoValvula != null) cmbTipoValvula.setEnabled(enabled);
         cmbValvula.setEnabled(enabled);
         cmbOperador.setEnabled(enabled);
         cmbFluido.setEnabled(enabled);
+
+        if (sliderEscalaTiempo != null) sliderEscalaTiempo.setEnabled(enabled);
+        if (pressureRequestedField != null) pressureRequestedField.setEnabled(enabled);
+        if (cmbSensor != null) cmbSensor.setEnabled(enabled);
+
+        if (rbtnBarg != null) rbtnBarg.setEnabled(enabled);
+        if (rbtnKgCm2 != null) rbtnKgCm2.setEnabled(enabled);
+        if (rbtnPSIG != null) rbtnPSIG.setEnabled(enabled);
     }
 
     public void updateCurrentValue(double value) {
@@ -542,6 +579,18 @@ public class RealTimeGraph extends JFrame {
     public void addChartPoint(double time, double value) {
         if (series.getItemCount() > MAX_POINTS) series.remove(0);
         series.add(time, value);
+
+        int ventanaSegundos = sliderEscalaTiempo != null ? sliderEscalaTiempo.getValue() : 60;
+        XYPlot plot = chart.getXYPlot();
+        NumberAxis domainAxis = (NumberAxis) plot.getDomainAxis();
+
+        if (time > ventanaSegundos) {
+            domainAxis.setLowerBound(time - ventanaSegundos);
+            domainAxis.setUpperBound(time);
+        } else {
+            domainAxis.setLowerBound(0);
+            domainAxis.setUpperBound(ventanaSegundos);
+        }
     }
 
     public void setChartBounds(double lowerBound, double upperBound) {
@@ -606,6 +655,4 @@ public class RealTimeGraph extends JFrame {
         NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
         rangeAxis.setLabel("Presión (" + unidad + ")");
     }
-
-
 }
