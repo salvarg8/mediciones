@@ -119,23 +119,20 @@ public class RealTimeGraph extends JFrame {
         Font comboBoxFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int) (12 * scaleFactor)));
         Font labelFont = new Font("Segoe UI", Font.PLAIN, Math.max(10, (int) (12 * scaleFactor)));
         Font indicatorTitleFont = new Font("Segoe UI", Font.BOLD, Math.max(10, (int) (12 * scaleFactor)));
-        Font indicatorValueFont = new Font("Consolas", Font.BOLD, Math.max(28, (int) (70 * scaleFactor)));
+
+        // 1. FUENTE GIGANTE
+        Font indicatorValueFont = new Font("Consolas", Font.BOLD, Math.max(80, (int) (50 * scaleFactor)));
 
         if (northPanel != null && northPanel.getBorder() instanceof TitledBorder) {
             ((TitledBorder) northPanel.getBorder()).setTitleFont(scaledFont);
         }
         cmbCliente.setFont(comboBoxFont);
         if (cmbPlanta != null) cmbPlanta.setFont(comboBoxFont);
-        if (cmbTipoValvula != null) cmbTipoValvula.setFont(comboBoxFont); // NUEVO
+        if (cmbTipoValvula != null) cmbTipoValvula.setFont(comboBoxFont);
         cmbValvula.setFont(comboBoxFont);
         cmbOperador.setFont(comboBoxFont);
         cmbFluido.setFont(comboBoxFont);
         if (cmbSensor != null) cmbSensor.setFont(comboBoxFont);
-
-        valueLabel.setFont(indicatorValueFont);
-        maxLabel.setFont(indicatorValueFont);
-        recLabel.setFont(indicatorValueFont);
-        tempLabel.setFont(indicatorValueFont);
 
         if (indicatorPanel != null) {
             for (Component comp : indicatorPanel.getComponents()) {
@@ -158,7 +155,14 @@ public class RealTimeGraph extends JFrame {
         if (portCombo != null) portCombo.setFont(comboBoxFont);
         if (baudCombo != null) baudCombo.setFont(comboBoxFont);
 
+        // 2. LA "BARREDORA" QUE ACHICABA LOS TEXTOS
         adjustLabelFontsInContainer(getContentPane(), labelFont);
+
+        // 3. NUESTRO ESCUDO: Volvemos a hacer gigantes los números AL FINAL
+        if (valueLabel != null) valueLabel.setFont(indicatorValueFont);
+        if (maxLabel != null) maxLabel.setFont(indicatorValueFont);
+        if (recLabel != null) recLabel.setFont(indicatorValueFont);
+        if (tempLabel != null) tempLabel.setFont(indicatorValueFont);
     }
 
     private void adjustLabelFontsInContainer(Container container, Font font) {
@@ -384,7 +388,8 @@ public class RealTimeGraph extends JFrame {
         label.setFont(font);
         label.setForeground(foreground);
         panel.add(label, BorderLayout.CENTER);
-        panel.setPreferredSize(new Dimension(150, 70));
+
+        // Eliminamos el preferredSize fijo para que se ajuste a la fuente gigante sola
         return panel;
     }
 
