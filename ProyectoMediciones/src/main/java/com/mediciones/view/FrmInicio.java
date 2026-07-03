@@ -115,13 +115,17 @@ public class FrmInicio extends JFrame implements ActionListener {
     }
 
     private void actualizarTextoMotorola(double val) {
-        String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
-        txtMotorola.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+        SwingUtilities.invokeLater(() -> {
+            String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
+            txtMotorola.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+        });
     }
 
     private void actualizarTextoEndress(double val) {
-        String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
-        txtEndressHauser.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+        SwingUtilities.invokeLater(() -> {
+            String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
+            txtEndressHauser.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+        });
     }
 
     private void initComponents() {
