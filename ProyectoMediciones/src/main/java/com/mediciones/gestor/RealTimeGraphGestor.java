@@ -41,6 +41,7 @@ public class RealTimeGraphGestor {
     private double constanteCTemp = 0.0;
     private String selectedSensorType = "Motorola";
     private double pressureRequested = 0.0;
+    private double temperaturaFinal = 0.0;
 
     private Medicion medicionActual;
 
@@ -281,6 +282,8 @@ public class RealTimeGraphGestor {
                 double currentV = selectedSensorType.equals("Motorola") ? vMotorola : vEndress;
                 double finalP = Math.max(0, (currentV - constanteC) * factorA);
                 double finalT = factorATemp * (tempRaw - constanteCTemp);
+                this.temperaturaFinal = finalT;
+                this.temperaturaFinal = finalT;
 
                 SwingUtilities.invokeLater(() -> {
                     view.updateCurrentValue(finalP);
@@ -326,6 +329,16 @@ public class RealTimeGraphGestor {
 
     public void stopDataCapture(Valvula valvula, Operador operador, Fluido fluido) {
         running = false;
+
+        if (this.medicionActual != null) {
+            this.medicionActual.setMaximo(maxValue);
+
+            double cierre = (recValue == Double.MAX_VALUE || !maxReached) ? 0.0 : recValue;
+            this.medicionActual.setRecuperacion(cierre);
+
+            this.medicionActual.setTemperaturaInicial(temperaturaFinal);
+        }
+
         if (dataThread != null && dataThread.isAlive()) {
             dataThread.interrupt();
         }
@@ -529,15 +542,36 @@ public class RealTimeGraphGestor {
                     double simulatedTime = 0.0;
                     double simulatedVolt = constanteC;
 
-                    double targetVolt = (pressureRequested / factorA) + constanteC + 0.2;
+                    // --- NUEVA LÓGICA DE FASES ---
+                    // 1. Calculamos el voltaje para un pico máximo (Ej: 15% por encima de la presión solicitada)
+                    double peakVolt = ((pressureRequested * 1.15) / factorA) + constanteC;
+
+                    // 2. Calculamos el voltaje para el cierre estable (Ej: 10% por debajo de la presión solicitada)
+                    double stableVolt = ((pressureRequested * 0.90) / factorA) + constanteC;
+
+                    boolean reachedPeak = false;
+                    boolean reachedStable = false;
 
                     while (!Thread.currentThread().isInterrupted()) {
-                        if (simulatedVolt < targetVolt) {
-                            simulatedVolt += 0.02 + (Math.random() * 0.01);
+
+                        if (!reachedPeak) {
+                            // FASE 1: Subiendo hasta superar la presión de apertura
+                            simulatedVolt += 0.04 + (Math.random() * 0.02);
+                            if (simulatedVolt >= peakVolt) {
+                                reachedPeak = true;
+                            }
+                        } else if (!reachedStable) {
+                            // FASE 2: Bajando hasta el punto de recierre/estabilización
+                            simulatedVolt -= 0.03 + (Math.random() * 0.02);
+                            if (simulatedVolt <= stableVolt) {
+                                reachedStable = true;
+                            }
                         } else {
-                            simulatedVolt += (Math.random() * 0.02) - 0.01;
+                            // FASE 3: Se mantiene estable con pequeñas fluctuaciones naturales
+                            simulatedVolt = stableVolt + (Math.random() * 0.02 - 0.01);
                         }
 
+                        // Simulación de temperatura
                         double tempRaw = (25.0 / factorATemp) + constanteCTemp + (Math.random() * 2.0 - 1.0);
 
                         String simulatedData = String.format(java.util.Locale.US, "%.1f,%.4f,%.4f,%.2f",
