@@ -128,7 +128,8 @@ public class ExcelGenerator {
 
     private void escribirPresionAperturaSolicitada() {
         if (medicion.getPresionSolicitada() != null) {
-            escribirCelda(11, 6, medicion.getPresionSolicitada() + " " + medicion.getUnidadPresion());
+            String presionFormateada = String.format(java.util.Locale.US, "%.2f", medicion.getPresionSolicitada());
+            escribirCelda(11, 6, presionFormateada + " " + medicion.getUnidadPresion());
         } else {
             escribirCelda(11, 6, "N/A");
         }
@@ -228,6 +229,7 @@ public class ExcelGenerator {
         XDDFValueAxis xAxis = chart.createValueAxis(AxisPosition.BOTTOM);
         xAxis.setTitle("Tiempo (s)");
         xAxis.setVisible(true);
+        xAxis.setNumberFormat("0.00");
         double maxX = xValues.get(xValues.size() - 1);
         xAxis.setMinimum(0.0);
         xAxis.setMaximum(maxX);
@@ -239,6 +241,7 @@ public class ExcelGenerator {
         String unidad = medicion.getUnidadPresion() != null ? medicion.getUnidadPresion() : "Presión";
         yAxis.setTitle(unidad);
         yAxis.setVisible(true);
+        yAxis.setNumberFormat("0.00");
 
         if (!yValues.isEmpty()) {
             double minY = yValues.get(0);
@@ -318,20 +321,24 @@ public class ExcelGenerator {
             // 3. Agregamos la etiqueta específicamente al primer punto (índice 0)
             CTDLbl dLbl = dLbls.addNewDLbl();
             dLbl.addNewIdx().setVal(1);
-            dLbl.addNewShowVal().setVal(true);       // Encendemos SOLO el valor Y (ej. 1)
-            dLbl.addNewShowCatName().setVal(false);  // Apagamos el valor X / Categoría (el 0)
-            dLbl.addNewShowSerName().setVal(false);  // Apagamos el nombre de la serie
+            dLbl.addNewShowVal().setVal(true);
+            dLbl.addNewShowCatName().setVal(false);
+            dLbl.addNewShowSerName().setVal(false);
             dLbl.addNewShowLegendKey().setVal(false);
-            // 4. Posicionamos el texto
             dLbl.addNewDLblPos().setVal(STDLblPos.L);
         }
 
         formatearTituloXML(chart.getCTChart().getTitle());
 
         for (CTValAx valAx : chart.getCTChart().getPlotArea().getValAxArray()) {
+            // Mantienes tu formateo de título
             if (valAx.isSetTitle()) {
                 formatearTituloXML(valAx.getTitle());
             }
+            // --- NUEVO: Forzar formato de 2 decimales y desvincular del origen ---
+            CTNumFmt numFmt = valAx.isSetNumFmt() ? valAx.getNumFmt() : valAx.addNewNumFmt();
+            numFmt.setFormatCode("0.00");
+            numFmt.setSourceLinked(false); // Esta es la clave: apaga "Vincular al origen"
         }
 
         chart.plot(data);
