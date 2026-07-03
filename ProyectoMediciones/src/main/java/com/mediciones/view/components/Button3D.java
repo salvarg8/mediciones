@@ -7,8 +7,8 @@ import java.awt.event.MouseEvent;
 import javax.swing.border.AbstractBorder;
 
 public class Button3D extends JButton {
-    private final Color baseColor;
-    private final Color highlightColor;
+    private Color baseColor;
+    private Color highlightColor;
     private boolean isPressed = false;
     private final boolean rounded;
 
@@ -96,5 +96,12 @@ public class Button3D extends JButton {
         public void paintBorder(Component c, Graphics g, int x, int y, int w, int h) {
             g.drawRoundRect(x, y, w - 1, h - 1, r, r);
         }
+    }
+    @Override
+    public void setBackground(Color bg) {
+        super.setBackground(bg);
+        this.baseColor = bg;
+        this.highlightColor = bg.brighter().brighter().brighter();
+        repaint();
     }
 }

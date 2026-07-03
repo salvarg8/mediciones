@@ -129,13 +129,13 @@ public class FrmCalibracionSensor extends JDialog {
         txtPresion1.setFont(new Font("Arial", Font.PLAIN, 18));
         ValidadorUI.soloNumeros(txtPresion1);
 
-        btnConfirmar1 = new Button3D("Confirmar 1", Color.GREEN.brighter(), true);
+        btnConfirmar1 = new Button3D("Confirmar 1",new Color(255, 193, 7) , true);
 
         txtPresion2 = new JTextField("");
         txtPresion2.setFont(new Font("Arial", Font.PLAIN, 18));
         ValidadorUI.soloNumeros(txtPresion2);
 
-        btnConfirmar2 = new Button3D("Confirmar 2", Color.GREEN.brighter(), true);
+        btnConfirmar2 = new Button3D("Confirmar 2", new Color(255, 193, 7), true);
 
         puntosPanel.add(new JLabel("Valor 1 (Ref):", SwingConstants.RIGHT));
         puntosPanel.add(txtPresion1);
@@ -227,11 +227,15 @@ public class FrmCalibracionSensor extends JDialog {
 
                 // ✅ Solo lo solicitado:
                 if (selectedSensor.equals("LM35")) {
+                    btnConfirmar1.setBackground(Color.LIGHT_GRAY);
+                    btnConfirmar2.setBackground(new Color(255, 193, 7));
                     btnConfirmar1.setText("Innecesario");
                     btnConfirmar1.setEnabled(false); // <-- clave: inactivo
                 } else {
                     btnConfirmar1.setText("Confirmar 1");
                     btnConfirmar1.setEnabled(true);
+                    btnConfirmar1.setBackground(new Color(255, 193, 7));
+                    btnConfirmar2.setBackground(new Color(255, 193, 7));
                 }
 
                 voltageAtZeroBar = Double.NaN;
@@ -251,6 +255,7 @@ public class FrmCalibracionSensor extends JDialog {
             }
             voltageAtZeroBar = currentRawVoltage;
             lblSignal0.setText(String.format("Voltaje en Punto 1: %.3f V", voltageAtZeroBar));
+            btnConfirmar1.setBackground(new Color(25, 135, 84));
         });
 
         btnConfirmar2.addActionListener(e -> {
@@ -290,6 +295,7 @@ public class FrmCalibracionSensor extends JDialog {
 
                 lblAValue.setText(String.format(java.util.Locale.US, "%.6f", a));
                 lblCValue.setText(String.format(java.util.Locale.US, "%.6f", c));
+                btnConfirmar2.setBackground(new Color(25, 135, 84));
             } catch (Exception ex) {
                 logger.error("Valor 2 inválido o error de cálculo", ex);
                 JOptionPane.showMessageDialog(this, "Error matemático al calcular constantes.", "Error", JOptionPane.ERROR_MESSAGE);
