@@ -243,7 +243,9 @@ public class ExcelGenerator {
         yAxis.setVisible(true);
         yAxis.setNumberFormat("0.00");
 
+// --- LÍMITES ESTRICTOS DEL EJE Y (PRESIÓN) ---
         if (!yValues.isEmpty()) {
+            // 1. Buscamos el valor más bajo y el más alto de las mediciones
             double minY = yValues.get(0);
             double maxY = yValues.get(0);
 
@@ -252,19 +254,21 @@ public class ExcelGenerator {
                 if (y > maxY) maxY = y;
             }
 
-            Double presionObj = medicion.getPresionSolicitada();
-            if (presionObj != null) {
-                if (presionObj < minY) minY = presionObj;
-                if (presionObj > maxY) maxY = presionObj;
+            // 2. Opcional: Evitamos que la línea azul de "presión solicitada" quede fuera de la pantalla
+            // Si tu línea azul está más abajo que tu medición mínima, obligamos al eje a empezar ahí
+            double setPressure = 0.0;
+            try {
+                setPressure = medicion.getPresionSolicitada();
+                if (setPressure < minY) minY = setPressure;
+                if (setPressure > maxY) maxY = setPressure;
+            } catch(Exception e) {
+                // Si la presión solicitada no es un número, ignoramos
             }
 
-            yAxis.setMinimum(Math.max(0.0, minY * 0.95));
-            yAxis.setMaximum(maxY * 1.05);
-        } else {
-            yAxis.setMinimum(0.0);
-            yAxis.setMaximum(10.0);
+            // 3. Establecemos los límites en el eje Y
+            yAxis.setMinimum(minY); // El vértice del gráfico ahora será el valor mínimo
+            yAxis.setMaximum(maxY + ((maxY - minY) * 0.05)); // Le damos un 5% de aire arriba para que no choque con el techo
         }
-
         int numDatos = xValues.size();
 
         XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(
