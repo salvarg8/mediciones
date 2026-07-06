@@ -243,7 +243,7 @@ public class ExcelGenerator {
         yAxis.setVisible(true);
         yAxis.setNumberFormat("0.00");
 
-// --- LÍMITES ESTRICTOS DEL EJE Y (PRESIÓN) ---
+        // --- LÍMITES ESTRICTOS DEL EJE Y (PRESIÓN) ---
         if (!yValues.isEmpty()) {
             // 1. Buscamos el valor más bajo y el más alto de las mediciones
             double minY = yValues.get(0);
@@ -343,6 +343,25 @@ public class ExcelGenerator {
             CTNumFmt numFmt = valAx.isSetNumFmt() ? valAx.getNumFmt() : valAx.addNewNumFmt();
             numFmt.setFormatCode("0.00");
             numFmt.setSourceLinked(false); // Esta es la clave: apaga "Vincular al origen"
+
+            if (!valAx.isSetMajorGridlines()) {
+                // 1. Creamos la grilla base
+                org.openxmlformats.schemas.drawingml.x2006.chart.CTChartLines gridlines = valAx.addNewMajorGridlines();
+
+                // 2. Accedemos a las propiedades visuales de esa grilla
+                org.openxmlformats.schemas.drawingml.x2006.main.CTShapeProperties spPr = gridlines.addNewSpPr();
+                org.openxmlformats.schemas.drawingml.x2006.main.CTLineProperties ln = spPr.addNewLn();
+
+                // Opcional: Hacer la línea más fina para mayor elegancia (9525 EMUs = 0.75 puntos)
+                ln.setW(9525);
+
+                // 3. Le aplicamos un relleno de color sólido
+                org.openxmlformats.schemas.drawingml.x2006.main.CTSolidColorFillProperties fill = ln.addNewSolidFill();
+                org.openxmlformats.schemas.drawingml.x2006.main.CTSRgbColor clr = fill.addNewSrgbClr();
+
+                // 4. Asignamos el color Gris Claro (RGB: 211, 211, 211)
+                clr.setVal(new byte[]{(byte) 211, (byte) 211, (byte) 211});
+            }
         }
 
         chart.plot(data);
