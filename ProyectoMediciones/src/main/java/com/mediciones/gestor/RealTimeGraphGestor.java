@@ -41,6 +41,7 @@ public class RealTimeGraphGestor {
     private double constanteCTemp = 0.0;
     private String selectedSensorType = "Motorola";
     private double pressureRequested = 0.0;
+    private double lastTemperature = 0.0;
 
     private Medicion medicionActual;
 
@@ -208,7 +209,7 @@ public class RealTimeGraphGestor {
             view.clearChart();
 
             running = false;
-            view.setStartButtonText("Detener");
+            view.setStartButtonText("Detener (F11)");
             view.setInfoFieldsEnabled(false);
 
             dataThread = new Thread(() -> {
@@ -282,12 +283,13 @@ public class RealTimeGraphGestor {
                 double finalP = Math.max(0, (currentV - constanteC) * factorA);
                 double finalT = factorATemp * (tempRaw - constanteCTemp);
 
+                lastTemperature = finalT;
                 SwingUtilities.invokeLater(() -> {
                     view.updateCurrentValue(finalP);
 
                     if (pressureRequested > 0 && !running && finalP >= 0.76 * pressureRequested) {
                         running = true;
-                        view.setStartButtonText("Detener");
+                        view.setStartButtonText("Detener (F11)");
 
                         double lowerBound = 0.76 * pressureRequested;
                         double upperBound = Math.max(lowerBound + 1, maxValue + 1);
@@ -326,6 +328,19 @@ public class RealTimeGraphGestor {
 
     public void stopDataCapture(Valvula valvula, Operador operador, Fluido fluido) {
         running = false;
+
+        // --- INICIO DEL CÓDIGO FALTANTE ---
+        if (medicionActual != null) {
+            medicionActual.setMaximo(maxValue);
+
+            // Si la recuperación no se alcanzó, guardamos 0 en lugar del número gigante (Double.MAX_VALUE)
+            double valorRecierre = (recValue == Double.MAX_VALUE) ? 0.0 : recValue;
+            medicionActual.setRecuperacion(valorRecierre);
+
+            medicionActual.setTemperaturaInicial(lastTemperature);
+        }
+        // --- FIN DEL CÓDIGO FALTANTE ---
+
         if (dataThread != null && dataThread.isAlive()) {
             dataThread.interrupt();
         }
@@ -521,7 +536,7 @@ public class RealTimeGraphGestor {
             view.clearChart();
 
             running = false;
-            view.setStartButtonText("Detener (Simulando)");
+            view.setStartButtonText("Detener (F11)");
             view.setInfoFieldsEnabled(false);
 
             dataThread = new Thread(() -> {
