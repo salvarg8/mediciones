@@ -19,6 +19,7 @@ public class FrmConfiguracion extends JDialog {
     private JLabel lblOrigen;
     private JLabel lblRutaTxt;
     private JLabel lblRutaReportes;
+    private JLabel lblRutaPlantilla; // <-- NUEVO
 
     // Radio buttons
     private JRadioButton rbBaseDatos;
@@ -28,10 +29,12 @@ public class FrmConfiguracion extends JDialog {
     // Ruta
     private JTextField txtRutaArchivo;
     private JTextField txtRutaReportes;
+    private JTextField txtRutaPlantilla; // <-- NUEVO
 
     // Botones
     private Button3D btnBuscar;
     private Button3D btnBuscarReportes;
+    private Button3D btnBuscarPlantilla; // <-- NUEVO
     private Button3D btnGuardar;
     private Button3D btnCancelar;
 
@@ -52,7 +55,7 @@ public class FrmConfiguracion extends JDialog {
         // Evitar que la ventana se cierre automáticamente al darle a la 'X'
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        setSize(600, 300);
+        setSize(600, 360); // <-- Aumenté el alto a 360 para que entre el nuevo campo
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -178,6 +181,33 @@ public class FrmConfiguracion extends JDialog {
         panelPrincipal.add(btnBuscarReportes, gbc);
 
         // ============================================
+        // RUTA DE LA PLANTILLA EXCEL (NUEVO)
+        // ============================================
+        lblRutaPlantilla = new JLabel("Plantilla Excel:");
+        lblRutaPlantilla.setFont(font);
+
+        txtRutaPlantilla = new JTextField(35);
+        txtRutaPlantilla.setFont(font);
+
+        btnBuscarPlantilla = new Button3D("...", new Color(220, 220, 255));
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        panelPrincipal.add(lblRutaPlantilla, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+
+        panelPrincipal.add(txtRutaPlantilla, gbc);
+
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+
+        panelPrincipal.add(btnBuscarPlantilla, gbc);
+
+        // ============================================
         // BOTONES
         // ============================================
 
@@ -200,7 +230,9 @@ public class FrmConfiguracion extends JDialog {
         rbArchivoTxt.addActionListener(e -> actualizarEstadoControles());
 
         btnBuscar.addActionListener(this::buscarArchivo);
-        btnBuscarReportes.addActionListener(this::buscarCarpetaReportes); // <-- NUEVO EVENTO
+        btnBuscarReportes.addActionListener(this::buscarCarpetaReportes);
+        btnBuscarPlantilla.addActionListener(e -> buscarPlantillaExcel()); // <-- EVENTO NUEVO
+
         btnGuardar.addActionListener(this::guardarConfiguracion);
 
         // El botón cancelar ahora llama a la validación en lugar de hacer dispose() directo
@@ -232,6 +264,7 @@ public class FrmConfiguracion extends JDialog {
             if (configuracion == null) {
                 rbBaseDatos.setSelected(true);
                 txtRutaArchivo.setText("");
+                txtRutaPlantilla.setText(""); // <-- NUEVO
             } else {
                 if ("TXT".equalsIgnoreCase(configuracion.getOrigenDatos())) {
                     rbArchivoTxt.setSelected(true);
@@ -244,7 +277,15 @@ public class FrmConfiguracion extends JDialog {
                                 ? configuracion.getRutaArchivo()
                                 : ""
                 );
+
+                // Cargar ruta de la plantilla excel
+                txtRutaPlantilla.setText(
+                        configuracion.getRutaPlantillaExcel() != null
+                                ? configuracion.getRutaPlantillaExcel()
+                                : ""
+                );
             }
+
             Ubicacion ubi = ubicacionGestor.obtenerUbicacion();
             if (ubi != null && ubi.getUbicacion() != null) {
                 txtRutaReportes.setText(ubi.getUbicacion());
@@ -269,7 +310,8 @@ public class FrmConfiguracion extends JDialog {
 
         String origen;
         String ruta = txtRutaArchivo.getText().trim();
-        String rutaReportes = txtRutaReportes.getText().trim(); // <-- NUEVO
+        String rutaReportes = txtRutaReportes.getText().trim();
+        String rutaPlantilla = txtRutaPlantilla.getText().trim(); // <-- NUEVO
 
         if (rbBaseDatos.isSelected()) {
             origen = "BD";
@@ -313,9 +355,11 @@ public class FrmConfiguracion extends JDialog {
         configuracion.setId(1);
         configuracion.setOrigenDatos(origen);
         configuracion.setRutaArchivo(ruta);
-        boolean okConfig = configuracionGestor.guardarConfiguracion(configuracion);
+        configuracion.setRutaPlantillaExcel(rutaPlantilla); // <-- Guardamos el valor en el modelo
 
+        boolean okConfig = configuracionGestor.guardarConfiguracion(configuracion);
         boolean okUbi = ubicacionGestor.guardarUbicacion(rutaReportes);
+
         if (okConfig && okUbi) {
             JOptionPane.showMessageDialog(
                     this,
@@ -398,6 +442,35 @@ public class FrmConfiguracion extends JDialog {
         if (resultado == JFileChooser.APPROVE_OPTION) {
             File carpetaSeleccionada = fileChooser.getSelectedFile();
             txtRutaReportes.setText(carpetaSeleccionada.getAbsolutePath());
+        }
+    }
+
+    private void buscarPlantillaExcel() {
+        JFileChooser fileChooser;
+
+        // Si ya hay una ruta cargada, intentamos abrir en esa carpeta
+        String rutaActual = txtRutaPlantilla.getText().trim();
+        if (!rutaActual.isEmpty()) {
+            File archivoActual = new File(rutaActual);
+            if (archivoActual.exists()) {
+                fileChooser = new JFileChooser(archivoActual.getParentFile());
+            } else {
+                fileChooser = new JFileChooser();
+            }
+        } else {
+            fileChooser = new JFileChooser();
+        }
+
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setDialogTitle("Seleccionar Plantilla Excel");
+
+        // Filtro para que solo muestre archivos Excel
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos Excel (*.xlsx)", "xlsx"));
+
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            txtRutaPlantilla.setText(selectedFile.getAbsolutePath());
         }
     }
 

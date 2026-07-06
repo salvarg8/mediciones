@@ -6,16 +6,17 @@ public class Configuracion {
     private String origenDatos;
     private String rutaArchivo;
     private String puertoComDefault;
+    private String rutaPlantillaExcel;
 
     public Configuracion() {
     }
 
-    public Configuracion(int id, String origenDatos, String rutaArchivo, String puertoComDefault) {
+    public Configuracion(int id, String origenDatos, String rutaArchivo, String puertoComDefault, String rutaPlantillaExcel) {
         this.id = id;
         this.origenDatos = origenDatos;
         this.rutaArchivo = rutaArchivo;
         this.puertoComDefault = puertoComDefault;
-
+        this.rutaPlantillaExcel = rutaPlantillaExcel;
     }
 
     public int getId() {
@@ -48,5 +49,13 @@ public class Configuracion {
 
     public void setPuertoComDefault(String puertoComDefault) {
         this.puertoComDefault = puertoComDefault;
+    }
+
+    public String getRutaPlantillaExcel() {
+        return rutaPlantillaExcel;
+    }
+
+    public void setRutaPlantillaExcel(String rutaPlantillaExcel) {
+        this.rutaPlantillaExcel = rutaPlantillaExcel;
     }
 }
