@@ -320,12 +320,12 @@ public class ExcelGenerator {
 
             // 3. Agregamos la etiqueta específicamente al primer punto (índice 0)
             CTDLbl dLbl = dLbls.addNewDLbl();
-            dLbl.addNewIdx().setVal(1);
+            dLbl.addNewIdx().setVal(numDatos-1);
             dLbl.addNewShowVal().setVal(true);
             dLbl.addNewShowCatName().setVal(false);
             dLbl.addNewShowSerName().setVal(false);
             dLbl.addNewShowLegendKey().setVal(false);
-            dLbl.addNewDLblPos().setVal(STDLblPos.L);
+            dLbl.addNewDLblPos().setVal(STDLblPos.R);
         }
 
         formatearTituloXML(chart.getCTChart().getTitle());
