@@ -18,7 +18,6 @@ import org.openxmlformats.schemas.drawingml.x2006.main.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -43,7 +42,7 @@ public class ExcelGenerator {
         if (medicion == null || archivoExcel == null) {
             throw new IllegalArgumentException("La medición y la ruta de destino no pueden ser nulas");
         }
-        this.medicion = medicion; // Guardamos el snapshot en la instancia
+        this.medicion = medicion;
 
         ConfiguracionGestor configGestor = new ConfiguracionGestor();
         Configuracion config = null;
@@ -52,27 +51,21 @@ public class ExcelGenerator {
         } catch (Exception e) {
             logger.error("Error al obtener la configuración de la base de datos.", e);
         }
-
         String rutaPlantilla = (config != null) ? config.getRutaPlantillaExcel() : null;
-
         InputStream is = null;
         try {
             if (rutaPlantilla != null && !rutaPlantilla.trim().isEmpty()) {
                 File archivoExterno = new File(rutaPlantilla);
                 if (archivoExterno.exists() && archivoExterno.isFile()) {
                     is = new FileInputStream(archivoExterno);
-                    logger.info("Usando plantilla Excel personalizada: " + rutaPlantilla);
                 } else {
                     logger.warn("La plantilla personalizada no existe. Se usará la interna. Ruta intentada: " + rutaPlantilla);
                 }
             }
-
-            // B. Si falló o no hay configuración, usar la interna de la aplicación (Plan B)
             if (is == null) {
                 is = getClass().getClassLoader().getResourceAsStream("Plantillas/plantilla.xlsx");
                 if (is != null) logger.info("Usando plantilla Excel interna por defecto.");
             }
-
             if (is == null) {
                 logger.warn("ADVERTENCIA: No se encontró ninguna plantilla. Creando nuevo workbook vacío.");
                 workbook = new XSSFWorkbook();
@@ -81,13 +74,11 @@ public class ExcelGenerator {
                 workbook = new XSSFWorkbook(is);
                 sheet = workbook.getSheetAt(0);
             }
-
         } catch (IOException e) {
             logger.error("Error crítico al cargar la plantilla Excel.", e);
             workbook = new XSSFWorkbook();
             sheet = workbook.createSheet("Reporte");
         } finally {
-            // Asegurarnos de cerrar el archivo si lo abrimos manualmente
             if (is != null) {
                 try {
                     is.close();
@@ -110,52 +101,32 @@ public class ExcelGenerator {
         for (int i = 0; i < tiemposRaw.size(); i++) {
             double px = tiemposRaw.get(i);
             double py = valoresRaw.get(i);
-
             if (!comenzarGrafico) {
                 if (py >= umbralDisparo) {
                     comenzarGrafico = true;
                     tiempoInicial = px;
                 }
             }
-
             if (comenzarGrafico) {
                 xValues.add(px - tiempoInicial);
                 yValues.add(py);
             }
         }
-
         if (xValues.isEmpty()) {
             for (int i = 0; i < tiemposRaw.size(); i++) {
                 xValues.add(tiemposRaw.get(i));
                 yValues.add(valoresRaw.get(i));
             }
         }
-
         agregarDatosHojaSecundaria(xValues, yValues);
-
         crearGrafico(xValues, yValues);
-
         if (medicion.getValvula() != null) {
             escribirDatosValvula();
         }
-
-        //escribirDatosCSVHeader();
         escribirFechaActual();
         escribirPrimeraTemperatura();
         escribirPresionAperturaSolicitada();
-
         guardarArchivoExcel(archivoExcel);
-
-        /*File archivoExcelFile = new File(archivoExcel);
-        try {
-            if (archivoExcelFile.exists() && Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(archivoExcelFile);
-            } else {
-                logger.warn("El entorno actual no soporta la apertura automática de archivos.");
-            }
-        } catch (Exception ex) {
-            logger.error("No se pudo ejecutar la apertura automática del archivo reporte: " + archivoExcel, ex);
-        } */
     }
 
     private void escribirPresionAperturaSolicitada() {
@@ -170,7 +141,6 @@ public class ExcelGenerator {
     private void escribirDatosValvula() {
         Valvula valvula = medicion.getValvula();
         if (valvula != null) {
-            // Formateo seguro para máximo y recuperación directos del modelo
             String nombreCliente = (valvula.getCliente() != null) ? valvula.getCliente().getNombre() : "Desconocido";
             String valorRecuperacion = (medicion.getRecuperacion() == Double.MAX_VALUE || medicion.getRecuperacion() == 0.0)
                     ? "0.00"
@@ -178,24 +148,16 @@ public class ExcelGenerator {
             String conexionEntrada = "Ø " + valvula.getEntradaBridaDiametro() + " " + (valvula.getEntradaBridaSerie() != null ? valvula.getEntradaBridaSerie() : "");
             String conexionSalida = "Ø " + valvula.getSalidaBridaDiametro() + " " + (valvula.getSalidaBridaSerie() != null ? valvula.getSalidaBridaSerie() : "");
 
-            escribirCelda(4, 1, nombreCliente);       // B5
-            escribirCelda(7, 2, valvula.getMarca());     // C8
-            escribirCelda(8, 2, valvula.getMaterialCuerpo()); // C9
+            escribirCelda(4, 1, nombreCliente);
+            escribirCelda(7, 2, valvula.getMarca());
+            escribirCelda(8, 2, valvula.getMaterialCuerpo());
             escribirCelda(26, 2, String.format(java.util.Locale.US, "%.2f", medicion.getMaximo()));
             escribirCelda(27, 2, valorRecuperacion);
-            escribirCelda(11, 2, valvula.getTag()); // C13
-            escribirCelda(12, 2, valvula.getNumeroSerie()); // C12
-            escribirCelda(8, 6, conexionEntrada); // G9
-            escribirCelda(9, 6, conexionSalida); // G10
+            escribirCelda(11, 2, valvula.getTag());
+            escribirCelda(12, 2, valvula.getNumeroSerie());
+            escribirCelda(8, 6, conexionEntrada);
+            escribirCelda(9, 6, conexionSalida);
         }
-    }
-
-    private void escribirDatosCSVHeader() {
-        String operador = medicion.getOperador() != null ? medicion.getOperador().getNombre() : "N/A";
-        String fluido = medicion.getFluido() != null ? medicion.getFluido().getNombre() : "N/A";
-
-        escribirCelda(48, 0, operador); // A50
-        escribirCelda(25, 6, fluido);   // G26
     }
 
     private void escribirFechaActual() {
@@ -230,9 +192,7 @@ public class ExcelGenerator {
                 if (r != null) sheetDatos.removeRow(r);
             }
         }
-
         Double presionObj = medicion.getPresionSolicitada() != null ? medicion.getPresionSolicitada() : 0.0;
-
         for (int i = 0; i < xValues.size(); i++) {
             XSSFRow row = sheetDatos.createRow(i);
             row.createCell(0).setCellValue(xValues.get(i));
@@ -242,29 +202,24 @@ public class ExcelGenerator {
     }
 
     private void crearGrafico(List<Double> xValues, List<Double> yValues) {
-
         if (xValues.isEmpty()) return;
-
         XSSFSheet sheetDatos = workbook.getSheet("Datos_Grafico");
         if (sheetDatos == null) {
             sheetDatos = sheet;
         }
-
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
         XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 29, 10, 44);
         XSSFChart chart = drawing.createChart(anchor);
-
         chart.setTitleText("Gráfico de Medición");
         chart.setTitleOverlay(false);
 
-        // CONFIGURACIÓN DE EJES (Ambos numéricos)
         XDDFValueAxis xAxis = chart.createValueAxis(AxisPosition.BOTTOM);
         xAxis.setTitle("Tiempo (s)");
         xAxis.setVisible(true);
         xAxis.setNumberFormat("0.00");
         double maxX = xValues.get(xValues.size() - 1);
         xAxis.setMinimum(0.0);
-        xAxis.setMaximum(maxX);
+        xAxis.setMaximum(maxX * 1.1);
         double majorUnit = maxX / 10.0;
         if (majorUnit < 0.1) majorUnit = 0.1;
         xAxis.setMajorUnit(majorUnit);
@@ -275,9 +230,7 @@ public class ExcelGenerator {
         yAxis.setVisible(true);
         yAxis.setNumberFormat("0.00");
 
-        // --- LÍMITES ESTRICTOS DEL EJE Y (PRESIÓN) ---
         if (!yValues.isEmpty()) {
-            // 1. Buscamos el valor más bajo y el más alto de las mediciones
             double minY = yValues.get(0);
             double maxY = yValues.get(0);
 
@@ -286,20 +239,16 @@ public class ExcelGenerator {
                 if (y > maxY) maxY = y;
             }
 
-            // 2. Opcional: Evitamos que la línea azul de "presión solicitada" quede fuera de la pantalla
-            // Si tu línea azul está más abajo que tu medición mínima, obligamos al eje a empezar ahí
             double setPressure = 0.0;
             try {
                 setPressure = medicion.getPresionSolicitada();
                 if (setPressure < minY) minY = setPressure;
                 if (setPressure > maxY) maxY = setPressure;
             } catch(Exception e) {
-                // Si la presión solicitada no es un número, ignoramos
             }
-
-            // 3. Establecemos los límites en el eje Y
-            yAxis.setMinimum(minY); // El vértice del gráfico ahora será el valor mínimo
-            yAxis.setMaximum(maxY + ((maxY - minY) * 0.05)); // Le damos un 5% de aire arriba para que no choque con el techo
+            yAxis.setMinimum(minY);
+            double limiteSuperior = maxY * 1.15;
+            yAxis.setMaximum(limiteSuperior);
         }
         int numDatos = xValues.size();
 
@@ -309,14 +258,11 @@ public class ExcelGenerator {
         XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(
                 sheetDatos, new CellRangeAddress(0, numDatos - 1, 1, 1));
 
-        // ---- EL CAMBIO CRUCIAL ESTÁ AQUÍ ----
-        // Usamos ChartTypes.SCATTER en lugar de LINE para que soporte Eje X numérico
         XDDFScatterChartData data = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, xAxis, yAxis);
 
         XDDFScatterChartData.Series seriePresion = (XDDFScatterChartData.Series) data.addSeries(xs, ys);
         seriePresion.setTitle("Presión", null);
         seriePresion.setSmooth(false);
-        // Ocultamos los puntos para que parezca un gráfico de líneas continuo
         seriePresion.setMarkerStyle(MarkerStyle.NONE);
 
         XDDFLineProperties lineaRoja = new XDDFLineProperties();
@@ -341,20 +287,15 @@ public class ExcelGenerator {
             lineaAzul.setFillProperties(new XDDFSolidFillProperties(XDDFColor.from(PresetColor.BLUE)));
             serieReferencia.setLineProperties(lineaAzul);
 
-            // --- INICIO CÓDIGO NUEVO PARA LA ETIQUETA ---
-            // 1. Obtenemos el objeto base del gráfico de dispersión
             CTScatterSer ctScatterSer = serieReferencia.getCTScatterSer();
 
-            // 2. Creamos el contenedor de etiquetas para la serie
             CTDLbls dLbls = ctScatterSer.addNewDLbls();
 
-            // Apagamos las etiquetas generales para que no se imprima en todos los puntos
             dLbls.addNewShowVal().setVal(false);
             dLbls.addNewShowLegendKey().setVal(false);
             dLbls.addNewShowCatName().setVal(false);
             dLbls.addNewShowSerName().setVal(false);
 
-            // 3. Agregamos la etiqueta específicamente al primer punto (índice 0)
             CTDLbl dLbl = dLbls.addNewDLbl();
             dLbl.addNewIdx().setVal(numDatos-1);
             dLbl.addNewShowVal().setVal(true);
@@ -367,31 +308,22 @@ public class ExcelGenerator {
         formatearTituloXML(chart.getCTChart().getTitle());
 
         for (CTValAx valAx : chart.getCTChart().getPlotArea().getValAxArray()) {
-            // Mantienes tu formateo de título
             if (valAx.isSetTitle()) {
                 formatearTituloXML(valAx.getTitle());
             }
-            // --- NUEVO: Forzar formato de 2 decimales y desvincular del origen ---
             CTNumFmt numFmt = valAx.isSetNumFmt() ? valAx.getNumFmt() : valAx.addNewNumFmt();
             numFmt.setFormatCode("0.00");
-            numFmt.setSourceLinked(false); // Esta es la clave: apaga "Vincular al origen"
+            numFmt.setSourceLinked(false);
 
             if (!valAx.isSetMajorGridlines()) {
-                // 1. Creamos la grilla base
                 CTChartLines gridlines = valAx.addNewMajorGridlines();
-
-                // 2. Accedemos a las propiedades visuales de esa grilla
                 CTShapeProperties spPr = gridlines.addNewSpPr();
                 CTLineProperties ln = spPr.addNewLn();
-
-                // Opcional: Hacer la línea más fina para mayor elegancia (9525 EMUs = 0.75 puntos)
                 ln.setW(9525);
 
-                // 3. Le aplicamos un relleno de color sólido
                 CTSolidColorFillProperties fill = ln.addNewSolidFill();
                 CTSRgbColor clr = fill.addNewSrgbClr();
 
-                // 4. Asignamos el color Gris Claro (RGB: 211, 211, 211)
                 clr.setVal(new byte[]{(byte) 211, (byte) 211, (byte) 211});
             }
         }
@@ -416,8 +348,8 @@ public class ExcelGenerator {
             } else {
                 rPr = p.isSetPPr() && p.getPPr().isSetDefRPr() ? p.getPPr().getDefRPr() : p.addNewPPr().addNewDefRPr();
             }
-            rPr.setSz(1300); // 1300 = Tamaño 13
-            rPr.setB(false); // Quitar negrita
+            rPr.setSz(1300);
+            rPr.setB(false);
         }
     }
 }

@@ -44,15 +44,15 @@ public class RealTimeGraph extends JFrame {
     private Button3D btnRecargarPortal;
 
     // radios buttons
-    private javax.swing.JRadioButton rbtnPSIG;
-    private javax.swing.JRadioButton rbtnKgCm2;
-    private javax.swing.JRadioButton rbtnBarg;
-    private javax.swing.ButtonGroup grupoUnidades;
+    private JRadioButton rbtnPSIG;
+    private JRadioButton rbtnKgCm2;
+    private JRadioButton rbtnBarg;
+    private ButtonGroup grupoUnidades;
 
     private int originalWidth = 900;
     private int originalHeight = 750;
 
-    private String selectedPressureUnit = "Kgr/cm²";
+    private String selectedPressureUnit = "Kg/cm²";
 
     private JPanel northPanel;
     private JComboBox<String> cmbSensor;
@@ -327,7 +327,7 @@ public class RealTimeGraph extends JFrame {
         GridBagConstraints gbcSouth = new GridBagConstraints();
         gbcSouth.insets = new Insets(5, 5, 5, 5);
         gbcSouth.fill = GridBagConstraints.HORIZONTAL;
-        startStopButton = new Button3D("Iniciar toma de datos", new Color(200, 255, 200));
+        startStopButton = new Button3D("Iniciar toma de datos (F11)", new Color(200, 255, 200));
         generateReportButton = new Button3D("Generar Reporte", new Color(255, 255, 200));
         returnButton = new Button3D("Descartar", new Color(255, 200, 200));
         btnRecargarPortal = new Button3D("Recargar Datos  ", new Color(255, 255, 200));
@@ -482,8 +482,8 @@ public class RealTimeGraph extends JFrame {
 
                 double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
 
-                gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
-                //gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                //gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
@@ -499,6 +499,18 @@ public class RealTimeGraph extends JFrame {
         btnRecargarPortal.addActionListener(e -> gestor.recargarPortal());
 
         returnButton.addActionListener(e -> gestor.discardData());
+
+        // Atajo de teclado F11 para accionar el botón de Iniciar/Detener
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap actionMap = getRootPane().getActionMap();
+
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F11, 0), "startStopAction");
+        actionMap.put("startStopAction", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                startStopButton.doClick();
+            }
+        });
     }
 
     private void filtrarValvulas() {
@@ -602,7 +614,7 @@ public class RealTimeGraph extends JFrame {
 
     public void resetCaptureUI() {
         SwingUtilities.invokeLater(() -> {
-            startStopButton.setText("Iniciar toma de datos");
+            startStopButton.setText("Iniciar toma de datos (F11)");
             setInfoFieldsEnabled(true);
         });
     }
