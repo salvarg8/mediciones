@@ -17,7 +17,7 @@ public class ConfiguracionDAO {
     public Configuracion obtenerConfiguracion() {
 
         String sql =
-                "SELECT id, origen_datos, ruta_archivo, puerto_com_default " +
+                "SELECT id, origen_datos, ruta_archivo, puerto_com_default, ruta_plantilla_excel " +
                         "FROM configuracion WHERE id = 1";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -30,7 +30,8 @@ public class ConfiguracionDAO {
                         rs.getInt("id"),
                         rs.getString("origen_datos"),
                         rs.getString("ruta_archivo"),
-                        rs.getString("puerto_com_default")
+                        rs.getString("puerto_com_default"),
+                        rs.getString("ruta_plantilla_excel")
                 );
 
             }
@@ -45,12 +46,13 @@ public class ConfiguracionDAO {
 
         String sql =
                 "INSERT INTO configuracion " +
-                        "(id, origen_datos, ruta_archivo, puerto_com_default) " +
-                        "VALUES (1, ?, ?, ?) " +
+                        "(id, origen_datos, ruta_archivo, puerto_com_default, ruta_plantilla_excel) " +
+                        "VALUES (1, ?, ?, ?, ?) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "origen_datos = VALUES(origen_datos), " +
                         "ruta_archivo = VALUES(ruta_archivo), " +
-                        "puerto_com_default = VALUES(puerto_com_default)";
+                        "puerto_com_default = VALUES(puerto_com_default), " +
+                        "ruta_plantilla_excel = VALUES(ruta_plantilla_excel)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -58,6 +60,7 @@ public class ConfiguracionDAO {
             ps.setString(1, configuracion.getOrigenDatos());
             ps.setString(2, configuracion.getRutaArchivo());
             ps.setString(3, configuracion.getPuertoComDefault());
+            ps.setString(4,configuracion.getRutaPlantillaExcel());
 
             return ps.executeUpdate() > 0;
 

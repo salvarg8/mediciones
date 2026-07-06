@@ -250,7 +250,8 @@ public final class DatabaseManager {
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "origen_datos TEXT NOT NULL," +
                     "ruta_archivo TEXT, " +
-                    "puerto_com_default TEXT "+
+                    "puerto_com_default TEXT, " +
+                    "ruta_plantilla_excel TEXT "+
                     ") ENGINE=InnoDB;");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS tipos_valvula (" +
@@ -294,6 +295,7 @@ public final class DatabaseManager {
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD COLUMN tipo_valvula_id INT");
             executeSchemaUpdate(stmt, "ALTER TABLE valvulas ADD CONSTRAINT fk_valvulas_tipo FOREIGN KEY (tipo_valvula_id) REFERENCES tipos_valvula(id)");
             executeSchemaUpdate(stmt, "ALTER TABLE configuracion ADD COLUMN puerto_com_default TEXT");
+            executeSchemaUpdate(stmt, "ALTER TABLE configuracion ADD COLUMN ruta_plantilla_excel TEXT");
         }
     }
 

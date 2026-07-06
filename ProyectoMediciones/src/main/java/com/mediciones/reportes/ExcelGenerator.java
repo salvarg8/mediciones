@@ -1,5 +1,7 @@
 package com.mediciones.reportes;
 
+import com.mediciones.gestor.ConfiguracionGestor;
+import com.mediciones.model.Configuracion;
 import com.mediciones.model.Medicion;
 import com.mediciones.model.Valvula;
 import org.apache.poi.ss.usermodel.Cell;
@@ -12,16 +14,12 @@ import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.openxmlformats.schemas.drawingml.x2006.chart.*;
-import org.openxmlformats.schemas.drawingml.x2006.main.CTTextCharacterProperties;
-import org.openxmlformats.schemas.drawingml.x2006.main.CTTextParagraph;
+import org.openxmlformats.schemas.drawingml.x2006.main.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -47,20 +45,54 @@ public class ExcelGenerator {
         }
         this.medicion = medicion; // Guardamos el snapshot en la instancia
 
-        // 1. Carga segura de la plantilla Excel desde los recursos del proyecto
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream("Plantillas/plantilla.xlsx")) {
+        ConfiguracionGestor configGestor = new ConfiguracionGestor();
+        Configuracion config = null;
+        try {
+            config = configGestor.obtenerConfiguracion();
+        } catch (Exception e) {
+            logger.error("Error al obtener la configuración de la base de datos.", e);
+        }
+
+        String rutaPlantilla = (config != null) ? config.getRutaPlantillaExcel() : null;
+
+        InputStream is = null;
+        try {
+            if (rutaPlantilla != null && !rutaPlantilla.trim().isEmpty()) {
+                File archivoExterno = new File(rutaPlantilla);
+                if (archivoExterno.exists() && archivoExterno.isFile()) {
+                    is = new FileInputStream(archivoExterno);
+                    logger.info("Usando plantilla Excel personalizada: " + rutaPlantilla);
+                } else {
+                    logger.warn("La plantilla personalizada no existe. Se usará la interna. Ruta intentada: " + rutaPlantilla);
+                }
+            }
+
+            // B. Si falló o no hay configuración, usar la interna de la aplicación (Plan B)
             if (is == null) {
-                logger.warn("ADVERTENCIA: No se encontró 'Plantillas/plantilla.xlsx' en los recursos. Creando nuevo workbook vacío.");
+                is = getClass().getClassLoader().getResourceAsStream("Plantillas/plantilla.xlsx");
+                if (is != null) logger.info("Usando plantilla Excel interna por defecto.");
+            }
+
+            if (is == null) {
+                logger.warn("ADVERTENCIA: No se encontró ninguna plantilla. Creando nuevo workbook vacío.");
                 workbook = new XSSFWorkbook();
                 sheet = workbook.createSheet("Reporte");
             } else {
                 workbook = new XSSFWorkbook(is);
                 sheet = workbook.getSheetAt(0);
             }
+
         } catch (IOException e) {
-            logger.error("Error al cargar la plantilla Excel desde los recursos.", e);
+            logger.error("Error crítico al cargar la plantilla Excel.", e);
             workbook = new XSSFWorkbook();
             sheet = workbook.createSheet("Reporte");
+        } finally {
+            // Asegurarnos de cerrar el archivo si lo abrimos manualmente
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException ignored) {}
+            }
         }
 
         List<Double> xValues = new ArrayList<>();
@@ -346,18 +378,18 @@ public class ExcelGenerator {
 
             if (!valAx.isSetMajorGridlines()) {
                 // 1. Creamos la grilla base
-                org.openxmlformats.schemas.drawingml.x2006.chart.CTChartLines gridlines = valAx.addNewMajorGridlines();
+                CTChartLines gridlines = valAx.addNewMajorGridlines();
 
                 // 2. Accedemos a las propiedades visuales de esa grilla
-                org.openxmlformats.schemas.drawingml.x2006.main.CTShapeProperties spPr = gridlines.addNewSpPr();
-                org.openxmlformats.schemas.drawingml.x2006.main.CTLineProperties ln = spPr.addNewLn();
+                CTShapeProperties spPr = gridlines.addNewSpPr();
+                CTLineProperties ln = spPr.addNewLn();
 
                 // Opcional: Hacer la línea más fina para mayor elegancia (9525 EMUs = 0.75 puntos)
                 ln.setW(9525);
 
                 // 3. Le aplicamos un relleno de color sólido
-                org.openxmlformats.schemas.drawingml.x2006.main.CTSolidColorFillProperties fill = ln.addNewSolidFill();
-                org.openxmlformats.schemas.drawingml.x2006.main.CTSRgbColor clr = fill.addNewSrgbClr();
+                CTSolidColorFillProperties fill = ln.addNewSolidFill();
+                CTSRgbColor clr = fill.addNewSrgbClr();
 
                 // 4. Asignamos el color Gris Claro (RGB: 211, 211, 211)
                 clr.setVal(new byte[]{(byte) 211, (byte) 211, (byte) 211});
