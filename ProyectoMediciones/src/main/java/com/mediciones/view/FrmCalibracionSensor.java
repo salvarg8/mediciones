@@ -30,7 +30,7 @@ public class FrmCalibracionSensor extends JDialog {
     private double a1 = 1.0, c1 = 0.0;
     private double a2 = 1.0, c2 = 0.0;
     private double a3 = 1.0, c3 = 0.0;
-    private String selectedSensor = "Motorola";
+    private String selectedSensor = "CS-PT1200";
 
     private JLabel lblPresionActual;
     private JTextField txtPresion1, txtPresion2;
@@ -104,8 +104,8 @@ public class FrmCalibracionSensor extends JDialog {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
 
         sensorCombo = new JComboBox<>(new String[]{
-                "Motorola (0-7 Bar)",
-                "Endress-Hauser (0-100 Bar)",
+                "CS-PT1200 (0-10 Barg)",
+                "Endress-Hauser (0-100 Barg)",
                 "LM35 (Temperatura)"
         });
         sensorCombo.setFont(new Font("Arial", Font.BOLD, 20));
@@ -222,7 +222,7 @@ public class FrmCalibracionSensor extends JDialog {
         sensorCombo.addActionListener(e -> {
             String selected = (String) sensorCombo.getSelectedItem();
             if (selected != null) {
-                selectedSensor = selected.contains("Motorola") ? "Motorola" :
+                selectedSensor = selected.contains("CS-PT1200") ? "CS-PT1200" :
                         (selected.contains("Endress-Hauser") ? "Endress-Hauser" : "LM35");
 
                 // ✅ Solo lo solicitado:
@@ -282,7 +282,7 @@ public class FrmCalibracionSensor extends JDialog {
                 double c = selectedSensor.equals("LM35") ? 0.0 : voltageAtZeroBar; // ⭐️ c = 0 para LM35
                 double a = val2 / (voltageAtKnownBar - c);
 
-                if (selectedSensor.equals("Motorola")) {
+                if (selectedSensor.equals("CS-PT1200")) {
                     a1 = a;
                     c1 = c;
                 } else if (selectedSensor.equals("Endress-Hauser")) {
@@ -314,7 +314,7 @@ public class FrmCalibracionSensor extends JDialog {
 
             SensorCalibracion calib = new SensorCalibracion();
             calib.setSensorType(selectedSensor);
-            if (selectedSensor.equals("Motorola")) {
+            if (selectedSensor.equals("CS-PT1200")) {
                 calib.setA1(a1);
                 calib.setC1(c1);
             } else if (selectedSensor.equals("Endress-Hauser")) {
@@ -368,7 +368,7 @@ public class FrmCalibracionSensor extends JDialog {
                             if (p.length >= 3) {
                                 try {
                                     double v;
-                                    if (selectedSensor.equals("Motorola"))
+                                    if (selectedSensor.equals("CS-PT1200"))
                                         v = Double.parseDouble(p[1].replace(",", "."));
                                     else if (selectedSensor.equals("Endress-Hauser"))
                                         v = Double.parseDouble(p[2].replace(",", "."));
@@ -378,8 +378,8 @@ public class FrmCalibracionSensor extends JDialog {
                                     currentRawVoltage = v;
                                     SwingUtilities.invokeLater(() -> {
                                         txtRawData.setText(line.trim());
-                                        double a = selectedSensor.equals("Motorola") ? a1 : (selectedSensor.equals("Endress-Hauser") ? a2 : a3);
-                                        double c = selectedSensor.equals("Motorola") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : 0.0); // LM35: c=0
+                                        double a = selectedSensor.equals("CS-PT1200") ? a1 : (selectedSensor.equals("Endress-Hauser") ? a2 : a3);
+                                        double c = selectedSensor.equals("CS-PT1200") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : 0.0); // LM35: c=0
                                         double finalVal = a * (currentRawVoltage - c);
                                         lblPresionActual.setText(String.format("%.2f %s", Math.max(0, finalVal),
                                                 selectedSensor.equals("LM35") ? "°C" : "Barg"));
@@ -399,7 +399,7 @@ public class FrmCalibracionSensor extends JDialog {
 
     private void loadCurrentCalibration() {
         try {
-            SensorCalibracion m = calibracionController.obtenerUltimaCalibracionPorSensor("Motorola");
+            SensorCalibracion m = calibracionController.obtenerUltimaCalibracionPorSensor("CS-PT1200");
             if (m != null) {
                 a1 = m.getA1() != null ? m.getA1() : 1.0;
                 c1 = m.getC1() != null ? m.getC1() : 0.0;
@@ -415,8 +415,8 @@ public class FrmCalibracionSensor extends JDialog {
                 c3 = l.getC3() != null ? l.getC3() : 0.0;
             }
 
-            double a = selectedSensor.equals("Motorola") ? a1 : (selectedSensor.equals("Endress-Hauser") ? a2 : a3);
-            double c = selectedSensor.equals("Motorola") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : c3);
+            double a = selectedSensor.equals("CS-PT1200") ? a1 : (selectedSensor.equals("Endress-Hauser") ? a2 : a3);
+            double c = selectedSensor.equals("CS-PT1200") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : c3);
             lblAValue.setText(String.format("%.6f", a));
             lblCValue.setText(String.format("%.6f", c));
         } catch (Exception ex) {

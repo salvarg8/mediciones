@@ -22,8 +22,8 @@ public class SensorCalibracion {
     public static final String FIELD_SENSOR_TYPE = "sensorType";
 
     private Long id; // Identificador único
-    private Double a1; // Constante a1 para Motorola (puede ser null)
-    private Double c1; // Constante c1 para Motorola (puede ser null)
+    private Double a1; // Constante a1 para CS-PT1200 (puede ser null)
+    private Double c1; // Constante c1 para CS-PT1200 (puede ser null)
     private Double a2; // Constante a2 para Endress-Hauser (puede ser null)
     private Double c2; // Constante c2 para Endress-Hauser (puede ser null)
     private Double a3; // Constante a3 para LM35 (puede ser null)
@@ -31,7 +31,7 @@ public class SensorCalibracion {
     private Double presionConocida; // Presión conocida durante la calibración (puede ser null)
     private Double voltajeConocido; // Voltaje conocido durante la calibración (puede ser null)
     private Date fechaCalibracion; // Fecha de la calibración
-    private String sensorType; // Tipo de sensor (Motorola, Endress-Hauser, LM35)
+    private String sensorType; // Tipo de sensor
 
     /**
      * Constructor vacío.

@@ -38,7 +38,7 @@ public class FrmInicioGestor {
 
     public void cargarConstantesCalibracion() {
         try {
-            SensorCalibracion calibM = calibracionController.obtenerUltimaCalibracionPorSensor("Motorola");
+            SensorCalibracion calibM = calibracionController.obtenerUltimaCalibracionPorSensor("CS-PT1200");
             if (calibM != null) {
                 a1 = (calibM.getA1() != null) ? calibM.getA1() : 1.0;
                 c1 = (calibM.getC1() != null) ? calibM.getC1() : 0.0;
@@ -66,7 +66,7 @@ public class FrmInicioGestor {
     }
 
     public void iniciarComunicacionSerial(String portName, boolean isPSIG, boolean isBarg, 
-                                          Consumer<Double> updateMotorola, Consumer<Double> updateEndress) {
+                                          Consumer<Double> updateSensorUno, Consumer<Double> updateSensorDos) {
         if (capturing) detenerComunicacionSerial();
         SerialPort[] ports = SerialPort.getCommPorts();
         if (ports.length == 0) { 
@@ -88,7 +88,7 @@ public class FrmInicioGestor {
                         if (comPort.bytesAvailable() > 0) {
                             String line = reader.readLine();
                             if (line != null && !line.trim().isEmpty()) {
-                                procesarDatosSerial(line.trim(), isPSIG, isBarg, updateMotorola, updateEndress);
+                                procesarDatosSerial(line.trim(), isPSIG, isBarg, updateSensorUno, updateSensorDos);
                             }
                         }
                         Thread.sleep(50);
@@ -113,7 +113,7 @@ public class FrmInicioGestor {
     }
 
     private void procesarDatosSerial(String rawLine, boolean isPSIG, boolean isBarg, 
-                                     Consumer<Double> updateMotorola, Consumer<Double> updateEndress) {
+                                     Consumer<Double> updateSensorUno, Consumer<Double> updateSensorDos) {
         try {
             String[] parts = rawLine.split(",");
             if (parts.length >= 3) {
@@ -126,8 +126,8 @@ public class FrmInicioGestor {
                 double factorEscala = isPSIG ? 14.2233 : isBarg ? 1.0 : 1.01972;
 
                 SwingUtilities.invokeLater(() -> {
-                    updateMotorola.accept(pr1 * factorEscala);
-                    updateEndress.accept(pr2 * factorEscala);
+                    updateSensorUno.accept(pr1 * factorEscala);
+                    updateSensorDos.accept(pr2 * factorEscala);
                 });
             }
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {

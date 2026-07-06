@@ -17,8 +17,8 @@ public class FrmInicio extends JFrame implements ActionListener {
 
     private final FrmInicioGestor controller;
 
-    private JTextArea txtMotorola;
-    private JTextArea txtEndressHauser;
+    private JTextArea txtSensorUno;
+    private JTextArea txtSensorDos;
     private JRadioButton rbPSIG;
     private JRadioButton rbKgCm2;
     private JRadioButton rbLbIn2;
@@ -109,22 +109,22 @@ public class FrmInicio extends JFrame implements ActionListener {
                 (String) cbPuertos.getSelectedItem(),
                 rbPSIG.isSelected(),
                 rbLbIn2.isSelected(),
-                val -> actualizarTextoMotorola(val),
-                val -> actualizarTextoEndress(val)
+                val -> actualizarTextoSensorUno(val),
+                val -> actualizarTextoSensorDos(val)
         );
     }
 
-    private void actualizarTextoMotorola(double val) {
+    private void actualizarTextoSensorUno(double val) {
         SwingUtilities.invokeLater(() -> {
             String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
-            txtMotorola.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+            txtSensorUno.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
         });
     }
 
-    private void actualizarTextoEndress(double val) {
+    private void actualizarTextoSensorDos(double val) {
         SwingUtilities.invokeLater(() -> {
             String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
-            txtEndressHauser.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+            txtSensorDos.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
         });
     }
 
@@ -141,33 +141,33 @@ public class FrmInicio extends JFrame implements ActionListener {
 
         int startXTop = (BASE_WIDTH - 660) / 2;
 
-        JLabel lblM = new JLabel("Sensor Motorola (0-7 PSIG)");
+        JLabel lblM = new JLabel("CS-PT1200 (0-10 Barg)");
         lblM.setBounds(startXTop, 70, 230, 20);
         scalablePanel.add(lblM);
         originalBounds.put(lblM, lblM.getBounds());
 
-        txtMotorola = new JTextArea();
-        txtMotorola.setEditable(false);
-        txtMotorola.setBackground(Color.BLUE.darker().darker());
-        txtMotorola.setForeground(Color.WHITE);
-        txtMotorola.setFont(new Font("Arial", Font.BOLD, (int) BASE_FONT_SENSOR));
-        txtMotorola.setBounds(startXTop, 90, 230, 100);
-        scalablePanel.add(txtMotorola);
-        originalBounds.put(txtMotorola, txtMotorola.getBounds());
+        txtSensorUno = new JTextArea();
+        txtSensorUno.setEditable(false);
+        txtSensorUno.setBackground(Color.BLUE.darker().darker());
+        txtSensorUno.setForeground(Color.WHITE);
+        txtSensorUno.setFont(new Font("Arial", Font.BOLD, (int) BASE_FONT_SENSOR));
+        txtSensorUno.setBounds(startXTop, 90, 230, 100);
+        scalablePanel.add(txtSensorUno);
+        originalBounds.put(txtSensorUno, txtSensorUno.getBounds());
 
         JLabel lblE = new JLabel("Sensor Endress-Hauser (0-7 PSIG)");
         lblE.setBounds(startXTop + 280, 70, 230, 20);
         scalablePanel.add(lblE);
         originalBounds.put(lblE, lblE.getBounds());
 
-        txtEndressHauser = new JTextArea();
-        txtEndressHauser.setEditable(false);
-        txtEndressHauser.setBackground(Color.BLUE.darker().darker());
-        txtEndressHauser.setForeground(Color.WHITE);
-        txtEndressHauser.setFont(new Font("Arial", Font.BOLD, (int) BASE_FONT_SENSOR));
-        txtEndressHauser.setBounds(startXTop + 280, 90, 230, 100);
-        scalablePanel.add(txtEndressHauser);
-        originalBounds.put(txtEndressHauser, txtEndressHauser.getBounds());
+        txtSensorDos = new JTextArea();
+        txtSensorDos.setEditable(false);
+        txtSensorDos.setBackground(Color.BLUE.darker().darker());
+        txtSensorDos.setForeground(Color.WHITE);
+        txtSensorDos.setFont(new Font("Arial", Font.BOLD, (int) BASE_FONT_SENSOR));
+        txtSensorDos.setBounds(startXTop + 280, 90, 230, 100);
+        scalablePanel.add(txtSensorDos);
+        originalBounds.put(txtSensorDos, txtSensorDos.getBounds());
 
         JPanel unidadPanel = new JPanel();
         unidadPanel.setLayout(new BoxLayout(unidadPanel, BoxLayout.Y_AXIS));
