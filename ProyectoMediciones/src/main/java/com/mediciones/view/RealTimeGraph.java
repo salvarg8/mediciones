@@ -273,7 +273,7 @@ public class RealTimeGraph extends JFrame {
 
         gbcSensor.insets = new Insets(2, 5, 5, 5);
         gbcSensor.fill = GridBagConstraints.HORIZONTAL;
-        String[] sensores = {"Motorola (0-7 Bar)", "Endress-Hauser (0-100 Bar)"};
+        String[] sensores = {"CS-PT1200 (0-10 Barg)", "Endress-Hauser (0-100 Barg)"};
         cmbSensor = new JComboBox<>(sensores);
         gbcSensor.gridx = 0;
         gbcSensor.gridy = 0;
@@ -283,7 +283,7 @@ public class RealTimeGraph extends JFrame {
         cmbSensor.addActionListener(e -> {
             String selected = (String) cmbSensor.getSelectedItem();
             if (selected != null) {
-                String sensorType = selected.contains("Motorola") ? "Motorola" : "Endress-Hauser";
+                String sensorType = selected.contains("CS-PT1200") ? "CS-PT1200" : "Endress-Hauser";
                 gestor.updateSensorType(sensorType);
             }
         });

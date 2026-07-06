@@ -39,7 +39,7 @@ public class RealTimeGraphGestor {
     private double constanteC = 0.0;
     private double factorATemp = 1.0;
     private double constanteCTemp = 0.0;
-    private String selectedSensorType = "Motorola";
+    private String selectedSensorType = "CS-PT1200";
     private double pressureRequested = 0.0;
     private double lastTemperature = 0.0;
 
@@ -121,9 +121,9 @@ public class RealTimeGraphGestor {
         try {
             SensorCalibracion ucPresion = new SensorCalibracionGestor().obtenerUltimaCalibracionPorSensor(selectedSensorType);
             if (ucPresion != null) {
-                factorA = (ucPresion.getA1() != null && selectedSensorType.equals("Motorola")) ? ucPresion.getA1() :
+                factorA = (ucPresion.getA1() != null && selectedSensorType.equals("CS-PT1200")) ? ucPresion.getA1() :
                         (ucPresion.getA2() != null && selectedSensorType.equals("Endress-Hauser")) ? ucPresion.getA2() : 1.0;
-                constanteC = (ucPresion.getC1() != null && selectedSensorType.equals("Motorola")) ? ucPresion.getC1() :
+                constanteC = (ucPresion.getC1() != null && selectedSensorType.equals("CS-PT1200")) ? ucPresion.getC1() :
                         (ucPresion.getC2() != null && selectedSensorType.equals("Endress-Hauser")) ? ucPresion.getC2() : 0.0;
             } else {
                 factorA = 1.0;
@@ -275,11 +275,11 @@ public class RealTimeGraphGestor {
             String[] parts = data.split(",");
             if (parts.length >= 3) {
                 double tiempo = Double.parseDouble(parts[0].trim());
-                double vMotorola = Double.parseDouble(parts[1].trim());
-                double vEndress = Double.parseDouble(parts[2].trim());
+                double vSensorUno = Double.parseDouble(parts[1].trim());
+                double vSensorDos = Double.parseDouble(parts[2].trim());
                 double tempRaw = (parts.length > 3) ? Double.parseDouble(parts[3].trim()) : 0.0;
 
-                double currentV = selectedSensorType.equals("Motorola") ? vMotorola : vEndress;
+                double currentV = selectedSensorType.equals("CS-PT1200") ? vSensorUno : vSensorDos;
                 double finalP = Math.max(0, (currentV - constanteC) * factorA);
                 double finalT = factorATemp * (tempRaw - constanteCTemp);
 
