@@ -298,11 +298,28 @@ public class ExcelGenerator {
 
             CTDLbl dLbl = dLbls.addNewDLbl();
             dLbl.addNewIdx().setVal(numDatos-1);
-            dLbl.addNewShowVal().setVal(true);
+
+            // 1. APAGAMOS TODO (Incluso el ShowVal) para que Excel no intente mostrar el número crudo
+            dLbl.addNewShowVal().setVal(false);
             dLbl.addNewShowCatName().setVal(false);
             dLbl.addNewShowSerName().setVal(false);
             dLbl.addNewShowLegendKey().setVal(false);
             dLbl.addNewDLblPos().setVal(STDLblPos.R);
+
+            // 2. ARMAMOS EL TEXTO EXACTO (Ej: "1.00 barg")
+            Double valorSet = medicion.getPresionSolicitada() != null ? medicion.getPresionSolicitada() : 0.0;
+            String valorFormateado = String.format(java.util.Locale.US, "%.2f", valorSet).replace(".", ",");
+            String unidadEtiqueta = medicion.getUnidadPresion() != null ? medicion.getUnidadPresion().trim() : "";
+            String textoFinal = valorFormateado + " " + unidadEtiqueta;
+
+            // 3. INYECTAMOS EL TEXTO MANUALMENTE EN LA ETIQUETA
+            CTTx tx = dLbl.addNewTx();
+            CTTextBody rich = tx.addNewRich();
+            rich.addNewBodyPr();
+            rich.addNewLstStyle();
+            CTTextParagraph p = rich.addNewP();
+            CTRegularTextRun r = p.addNewR();
+            r.setT(textoFinal);
         }
 
         formatearTituloXML(chart.getCTChart().getTitle());

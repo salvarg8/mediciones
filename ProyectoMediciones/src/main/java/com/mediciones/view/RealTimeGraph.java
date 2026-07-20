@@ -258,11 +258,23 @@ public class RealTimeGraph extends JFrame {
 
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarEscalaY();
+            }
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {}
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarEscalaY();
+            }
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                actualizarEscalaY();
+            }
+            private void actualizarEscalaY() {
+                SwingUtilities.invokeLater(() -> {
+                    int segundos = sliderEscalaTiempo != null ? sliderEscalaTiempo.getValue() : 60;
+                    ajustarEscalaTiempo(segundos);
+                });
+            }
         });
 
         pressureRequestedPanel.add(pressureRequestedField, BorderLayout.CENTER);
@@ -397,6 +409,8 @@ public class RealTimeGraph extends JFrame {
     private void ajustarEscalaTiempo(int segundos) {
         if (chart != null) {
             XYPlot plot = chart.getXYPlot();
+
+            // 1. AJUSTE DEL EJE X (TIEMPO)
             NumberAxis domainAxis = (NumberAxis) plot.getDomainAxis();
             domainAxis.setAutoRange(false);
 
@@ -411,6 +425,31 @@ public class RealTimeGraph extends JFrame {
             } else {
                 domainAxis.setLowerBound(0);
                 domainAxis.setUpperBound(segundos);
+            }
+
+            // 2. AJUSTE DEL EJE Y (PRESIÓN SOLICITADA)
+            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+            rangeAxis.setAutoRange(false);
+            rangeAxis.setLowerBound(0); // El límite inferior siempre arranca en 0
+
+            try {
+                String textoPresion = pressureRequestedField.getText().trim().replace(",", ".");
+                if (!textoPresion.isEmpty()) {
+                    double presionSolicitada = Double.parseDouble(textoPresion);
+
+                    if (presionSolicitada > 0) {
+                        // Le damos un 25% de margen superior para que la curva respire visualmente
+                        double limiteSuperior = presionSolicitada * 1.25;
+                        rangeAxis.setUpperBound(limiteSuperior);
+                    } else {
+                        rangeAxis.setUpperBound(10); // Valor por defecto si ponen 0
+                    }
+                } else {
+                    rangeAxis.setUpperBound(10); // Valor por defecto si está vacío
+                }
+            } catch (NumberFormatException e) {
+                // Si el usuario está escribiendo y temporalmente no es un número válido
+                rangeAxis.setUpperBound(10);
             }
         }
     }
@@ -482,8 +521,8 @@ public class RealTimeGraph extends JFrame {
 
                 double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
 
-                //gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
-                gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                //gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
