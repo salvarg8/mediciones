@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
-import java.awt.Color;
+import java.awt.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -44,6 +44,9 @@ public class RealTimeGraphGestor {
     private double lastTemperature = 0.0;
 
     private Medicion medicionActual;
+
+    private boolean reporteGenerado = false;
+    private String rutaUltimoReporte = null;
 
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphGestor.class);
 
@@ -172,6 +175,8 @@ public class RealTimeGraphGestor {
 
     public void startDataCapture(JComboBox<String> portCombo, JComboBox<Integer> baudCombo,
                                  Cliente cliente, Valvula valvula, double currentPressureRequested) {
+        reporteGenerado = false;
+        rutaUltimoReporte = null;
 
         medicionActual = new Medicion(
                 valvula,
@@ -348,6 +353,18 @@ public class RealTimeGraphGestor {
     }
 
     public void guardarExcel(Cliente cliente, Valvula valvula, Operador operador, Fluido fluido) {
+        if (reporteGenerado && rutaUltimoReporte != null) {
+            try {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(new File(rutaUltimoReporte));
+                }
+            } catch (Exception e) {
+                logger.error("No se pudo abrir el reporte existente: " + e.getMessage());
+                view.showErrorMessage("No se pudo abrir el reporte. Es posible que haya sido movido o eliminado.");
+            }
+            return;
+        }
+
         if (valvula == null || operador == null || fluido == null) {
             view.showErrorMessage("Debe seleccionar Válvula, Operador y Fluido.");
             return;
@@ -388,11 +405,14 @@ public class RealTimeGraphGestor {
 
             new ExcelGenerator().generarExcel(this.medicionActual, archivoDestinoFinal.getAbsolutePath());
 
+            reporteGenerado = true;
+            rutaUltimoReporte = archivoDestinoFinal.getAbsolutePath();
+
             view.showMessage("Reporte generado exitosamente en:\n" + archivoDestinoFinal.getAbsolutePath());
 
             try {
-                if (java.awt.Desktop.isDesktopSupported()) {
-                    java.awt.Desktop.getDesktop().open(archivoDestinoFinal);
+                if (Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(archivoDestinoFinal);
                 }
             } catch (Exception e) {
                 logger.error("No se pudo abrir el archivo automáticamente: " + e.getMessage());
@@ -508,10 +528,11 @@ public class RealTimeGraphGestor {
     }
 
     public void startSimulatedDataCapture(Cliente cliente, Valvula valvula, double currentPressureRequested) {
-        logger.info("inicio simulacion");
         if (dataThread != null && dataThread.isAlive()) {
             return;
         }
+        reporteGenerado = false;
+        rutaUltimoReporte = null;
 
         medicionActual = new Medicion(
                 valvula,
@@ -548,7 +569,7 @@ public class RealTimeGraphGestor {
 
                     while (!Thread.currentThread().isInterrupted()) {
                         if (simulatedVolt < targetVolt) {
-                            simulatedVolt += 0.02 + (Math.random() * 0.01);
+                            simulatedVolt += 0.02 + (Math.random() * 0.015);
                         } else {
                             simulatedVolt += (Math.random() * 0.02) - 0.01;
                         }

@@ -190,27 +190,27 @@ public class FrmInicio extends JFrame implements ActionListener {
         int startXBtn = (BASE_WIDTH - 680) / 2;
 
         // --- FILA 1 ---
-        btnClientes = new Button3D("Clientes", new Color(200, 255, 200), true);
+        btnClientes = new Button3D("Clientes", new Color(236, 239, 241), true);
         btnClientes.setBounds(startXBtn, 230, 120, 40);
-        btnOperador = new Button3D("Operador", new Color(200, 255, 200), true);
+        btnOperador = new Button3D("Operador", new Color(236, 239, 241), true);
         btnOperador.setBounds(startXBtn + 140, 230, 120, 40);
-        btnPlantas = new Button3D("Plantas", new Color(200, 255, 200), true);
+        btnPlantas = new Button3D("Plantas", new Color(236, 239, 241), true);
         btnPlantas.setBounds(startXBtn + 280, 230, 120, 40);
-        btnMedicion = new Button3D("Medicion", Color.GREEN.brighter(), true);
+        btnMedicion = new Button3D("Medicion", new Color(76, 175, 80), true);
         btnMedicion.setBounds(startXBtn + 420, 230, 120, 40);
-        btnReconectar = new Button3D("Refrescar", new Color(200, 220, 255), true);
+        btnReconectar = new Button3D("Refrescar", new Color(224, 247, 250), true);
         btnReconectar.setBounds(startXBtn + 560, 230, 120, 40);
 
         // --- FILA 2 ---
-        btnValvulas = new Button3D("Valvulas", new Color(200, 255, 200), true);
+        btnValvulas = new Button3D("Valvulas", new Color(236, 239, 241), true);
         btnValvulas.setBounds(startXBtn, 290, 120, 40);
-        btnFluidos = new Button3D("Fluidos", new Color(200, 255, 200), true);
+        btnFluidos = new Button3D("Fluidos", new Color(236, 239, 241), true);
         btnFluidos.setBounds(startXBtn + 140, 290, 120, 40);
-        btnTiposValvula = new Button3D("Tipos Válvula", new Color(200, 255, 200), true);
+        btnTiposValvula = new Button3D("Tipos Válvula", new Color(236, 239, 241), true);
         btnTiposValvula.setBounds(startXBtn + 280, 290, 120, 40);
-        btnConfiguracion = new Button3D("Configuración", new Color(255, 255, 200), true);
+        btnConfiguracion = new Button3D("Configuración", new Color(236, 239, 241), true);
         btnConfiguracion.setBounds(startXBtn + 420, 290, 120, 40);
-        btnCalibracion = new Button3D("Calibrar", Color.YELLOW, true);
+        btnCalibracion = new Button3D("Calibrar", new Color(255, 249, 196), true);
         btnCalibracion.setBounds(startXBtn + 560, 290, 120, 40);
 
         // --- FILA 3 ---
