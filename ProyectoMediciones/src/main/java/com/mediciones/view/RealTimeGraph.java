@@ -2,7 +2,12 @@ package com.mediciones.view;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.gestor.RealTimeGraphGestor;
-import com.mediciones.model.*;
+import com.mediciones.model.Cliente;
+import com.mediciones.model.Fluido;
+import com.mediciones.model.Operador;
+import com.mediciones.model.Planta;
+import com.mediciones.model.TipoValvula;
+import com.mediciones.model.Valvula;
 import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
@@ -176,9 +181,9 @@ public class RealTimeGraph extends JFrame {
     private void initComponents() {
         northPanel = new JPanel(new BorderLayout(0, 15));
         northPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        JLabel titleLabel = new JLabel("Medición", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        northPanel.add(titleLabel, BorderLayout.NORTH);
+        //   JLabel titleLabel = new JLabel("Medición", SwingConstants.CENTER);
+        //    titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        //  northPanel.add(titleLabel, BorderLayout.NORTH);
 
         JPanel northCenterPanel = new JPanel(new BorderLayout(10, 10));
 
@@ -258,11 +263,16 @@ public class RealTimeGraph extends JFrame {
 
         pressureRequestedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+            }
+
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {}
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+            }
+
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
 
         pressureRequestedPanel.add(pressureRequestedField, BorderLayout.CENTER);
@@ -346,20 +356,8 @@ public class RealTimeGraph extends JFrame {
         gbcSouth.gridx = 4;
         southPanel.add(btnSalir, gbcSouth);
 
-        JPanel comPanel = new JPanel(new GridLayout(1, 4, 10, 0));
-        comPanel.add(new JLabel("Puerto:", SwingConstants.RIGHT));
-        portCombo = new JComboBox<>();
-        for (SerialPort port : SerialPort.getCommPorts()) portCombo.addItem(port.getSystemPortName());
-        comPanel.add(portCombo);
-        comPanel.add(new JLabel("Baudios:", SwingConstants.RIGHT));
-        baudCombo = new JComboBox<>(new Integer[]{9600, 19200, 38400, 57600, 115200});
-        comPanel.add(baudCombo);
-
-        gbcSouth.gridx = 0;
-        gbcSouth.gridy = 1;
-        gbcSouth.gridwidth = 6;
-        gbcSouth.fill = GridBagConstraints.NONE;
-        southPanel.add(comPanel, gbcSouth);
+// 1. Cambiamos GridLayout por FlowLayout alineado a la izquierda con 15px de separación
+        JPanel comPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
 
         JPanel ledPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         ledLabel = new JLabel(" ");
@@ -368,10 +366,28 @@ public class RealTimeGraph extends JFrame {
         ledLabel.setPreferredSize(new Dimension(20, 20));
         ledPanel.add(ledLabel);
         ledPanel.add(new JLabel("Comunicación con sensores"));
+
+        // 2. Corregimos un pequeño error: comPanel ahora usa FlowLayout,
+        // por lo que no necesitas pasarle 'gbcSouth' al agregar el ledPanel.
+        comPanel.add(ledPanel);
+
+        comPanel.add(new JLabel("Puerto:")); // Quitamos el SwingConstants.RIGHT porque en FlowLayout no hace falta
+        portCombo = new JComboBox<>();
+        for (SerialPort port : SerialPort.getCommPorts()) {
+            portCombo.addItem(port.getSystemPortName());
+        }
+        comPanel.add(portCombo);
+
+        comPanel.add(new JLabel("Baudios:"));
+        baudCombo = new JComboBox<>(new Integer[]{9600, 19200, 38400, 57600, 115200});
+        comPanel.add(baudCombo);
+
+// Esto queda igual (para agregar el comPanel al southPanel que sí usa GridBagLayout)
         gbcSouth.gridx = 0;
-        gbcSouth.gridy = 2;
-        gbcSouth.anchor = GridBagConstraints.WEST;
-        southPanel.add(ledPanel, gbcSouth);
+        gbcSouth.gridy = 1;
+        gbcSouth.gridwidth = 6;
+        gbcSouth.fill = GridBagConstraints.NONE;
+        southPanel.add(comPanel, gbcSouth);
 
         add(southPanel, BorderLayout.SOUTH);
 
@@ -482,8 +498,8 @@ public class RealTimeGraph extends JFrame {
 
                 double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
 
-                //gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
-                gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                //gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
