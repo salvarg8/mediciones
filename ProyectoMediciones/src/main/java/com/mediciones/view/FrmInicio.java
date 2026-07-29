@@ -133,7 +133,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         scalablePanel.setBackground(Color.WHITE);
         scalablePanel.setPreferredSize(new Dimension(BASE_WIDTH, BASE_HEIGHT));
 
-        JLabel titleLabel = new JLabel("Sistema de documentacion de banco de pruebas", JLabel.CENTER);
+        JLabel titleLabel = new JLabel("Sistema de documentación de banco de pruebas", JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setBounds(0, 10, BASE_WIDTH, 40);
         scalablePanel.add(titleLabel);
@@ -155,7 +155,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         scalablePanel.add(txtSensorUno);
         originalBounds.put(txtSensorUno, txtSensorUno.getBounds());
 
-        JLabel lblE = new JLabel("Sensor Endress-Hauser (0-7 PSIG)");
+        JLabel lblE = new JLabel("Endress-Hauser (0-100 Barg)");
         lblE.setBounds(startXTop + 280, 70, 230, 20);
         scalablePanel.add(lblE);
         originalBounds.put(lblE, lblE.getBounds());
@@ -281,10 +281,7 @@ public class FrmInicio extends JFrame implements ActionListener {
             iniciarComunicacionSerial();
         });
 
-        // deshabilito botones (temporal si así lo tenías)
-        btnClientes.setEnabled(true);
-        btnValvulas.setEnabled(true);
-        btnOperador.setEnabled(true);
+        versionLimitada(false);
 
         getContentPane().add(scalablePanel);
         collectFonts(getContentPane());
@@ -382,5 +379,14 @@ public class FrmInicio extends JFrame implements ActionListener {
             FrmInicio frame = new FrmInicio();
             frame.setVisible(true);
         });
+    }
+
+    private void versionLimitada(boolean habilitado){
+        btnClientes.setEnabled(!habilitado);
+        btnOperador.setEnabled(!habilitado);
+        btnPlantas.setEnabled(!habilitado);
+        btnValvulas.setEnabled(!habilitado);
+        btnFluidos.setEnabled(!habilitado);
+        btnTiposValvula.setEnabled(!habilitado);
     }
 }

@@ -42,6 +42,7 @@ public class RealTimeGraphGestor {
     private String selectedSensorType = "CS-PT1200";
     private double pressureRequested = 0.0;
     private double lastTemperature = 0.0;
+    private long pcStartTime;
 
     private Medicion medicionActual;
 
@@ -162,6 +163,7 @@ public class RealTimeGraphGestor {
     }
 
     public void resetValues() {
+        pcStartTime = System.currentTimeMillis();
         maxValue = 0;
         recValue = Double.MAX_VALUE;
         maxReached = false;
@@ -279,7 +281,8 @@ public class RealTimeGraphGestor {
         try {
             String[] parts = data.split(",");
             if (parts.length >= 3) {
-                double tiempo = Double.parseDouble(parts[0].trim());
+                //double tiempo = Double.parseDouble(parts[0].trim());
+                double tiempo = (System.currentTimeMillis() - pcStartTime) / 1000.0;
                 double vSensorUno = Double.parseDouble(parts[1].trim());
                 double vSensorDos = Double.parseDouble(parts[2].trim());
                 double tempRaw = (parts.length > 3) ? Double.parseDouble(parts[3].trim()) : 0.0;
