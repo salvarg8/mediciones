@@ -151,12 +151,13 @@ public class ExcelGenerator {
             escribirCelda(4, 1, nombreCliente);
             escribirCelda(7, 2, valvula.getMarca());
             escribirCelda(8, 2, valvula.getMaterialCuerpo());
-            escribirCelda(26, 2, String.format(java.util.Locale.US, "%.2f", medicion.getMaximo()));
-            escribirCelda(27, 2, valorRecuperacion);
+            escribirCelda(26, 2, String.format(java.util.Locale.US, "%.2f", medicion.getMaximo()) + " " + medicion.getUnidadPresion());
+            escribirCelda(27, 2, valorRecuperacion + " " + medicion.getUnidadPresion());
             escribirCelda(11, 2, valvula.getTag());
             escribirCelda(12, 2, valvula.getNumeroSerie());
             escribirCelda(8, 6, conexionEntrada);
             escribirCelda(9, 6, conexionSalida);
+            escribirCelda(48,0, medicion.getOperador().getNombre());
         }
     }
 
@@ -167,7 +168,7 @@ public class ExcelGenerator {
 
     private void escribirPrimeraTemperatura() {
         if (medicion.getTemperaturaInicial() != null) {
-            escribirCelda(26, 6, String.format(java.util.Locale.US, "%.2f", medicion.getTemperaturaInicial())); // F27
+            escribirCelda(26, 6, String.format(java.util.Locale.US, "%.0f", medicion.getTemperaturaInicial()) + "° C"); // F27
         } else {
             escribirCelda(26, 6, "0.00");
         }

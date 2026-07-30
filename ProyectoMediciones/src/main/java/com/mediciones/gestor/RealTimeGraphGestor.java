@@ -400,9 +400,21 @@ public class RealTimeGraphGestor {
             String clienteLimpio = cliente.getNombre().replaceAll("[\\\\/:*?\"<>|]", "-");
             String tagLimpio = valvula.getTag().replaceAll("[\\\\/:*?\"<>|]", "-");
 
+            String anio = new SimpleDateFormat("yyyy").format(new Date());
+
             String nombreArchivo = clienteLimpio + "-" + tagLimpio + "-" + fecha + ".xlsx";
 
-            File archivoDestinoBase = new File(direccion, nombreArchivo);
+            // Ruta: rutaOriginal/Cliente/Año
+            File carpetaDestino = new File(direccion + File.separator
+                    + clienteLimpio + File.separator
+                    + anio);
+
+            // Crea las carpetas si no existen
+            if (!carpetaDestino.exists()) {
+                carpetaDestino.mkdirs();
+            }
+
+            File archivoDestinoBase = new File(carpetaDestino, nombreArchivo);
             String rutaUnica = obtenerRutaUnica(archivoDestinoBase.getAbsolutePath());
             File archivoDestinoFinal = new File(rutaUnica);
 
@@ -457,11 +469,11 @@ public class RealTimeGraphGestor {
         }
 
         int contador = 1;
-        java.io.File nuevoArchivo;
+        File nuevoArchivo;
 
         do {
             String nuevoNombre = nombreSinExtension + " (" + contador + ")" + extension;
-            nuevoArchivo = new java.io.File(carpeta, nuevoNombre);
+            nuevoArchivo = new File(carpeta, nuevoNombre);
             contador++;
         } while (nuevoArchivo.exists());
 
