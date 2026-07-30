@@ -196,13 +196,13 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnOperador.setBounds(startXBtn + 140, 230, 120, 40);
         btnPlantas = new Button3D("Plantas", new Color(236, 239, 241), true);
         btnPlantas.setBounds(startXBtn + 280, 230, 120, 40);
-        btnMedicion = new Button3D("Medicion", new Color(76, 175, 80), true);
+        btnMedicion = new Button3D("Medición", new Color(76, 175, 80), true);
         btnMedicion.setBounds(startXBtn + 420, 230, 120, 40);
         btnReconectar = new Button3D("Refrescar", new Color(224, 247, 250), true);
         btnReconectar.setBounds(startXBtn + 560, 230, 120, 40);
 
         // --- FILA 2 ---
-        btnValvulas = new Button3D("Valvulas", new Color(236, 239, 241), true);
+        btnValvulas = new Button3D("Válvulas", new Color(236, 239, 241), true);
         btnValvulas.setBounds(startXBtn, 290, 120, 40);
         btnFluidos = new Button3D("Fluidos", new Color(236, 239, 241), true);
         btnFluidos.setBounds(startXBtn + 140, 290, 120, 40);
