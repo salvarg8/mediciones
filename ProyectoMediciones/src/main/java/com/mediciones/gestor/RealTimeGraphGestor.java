@@ -681,9 +681,9 @@ public class RealTimeGraphGestor {
     }
 
     public void loadRadioButtonsData(JRadioButton rbtnBarg, JRadioButton rbtnKgCm2, JRadioButton rbtnPSIG, ButtonGroup grupoUnidades) {
-        rbtnPSIG = new javax.swing.JRadioButton("PSIG");
-        rbtnKgCm2 = new javax.swing.JRadioButton("Kg/cm²");
-        rbtnBarg = new javax.swing.JRadioButton("Barg");
+        rbtnPSIG = new javax.swing.JRadioButton("psig");
+        rbtnKgCm2 = new javax.swing.JRadioButton("kg/cm²");
+        rbtnBarg = new javax.swing.JRadioButton("barg");
 
         grupoUnidades = new javax.swing.ButtonGroup();
         grupoUnidades.add(rbtnPSIG);

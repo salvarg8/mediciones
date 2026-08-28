@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.border.LineBorder;
 
+import com.mediciones.config.AppConfig;
 import com.mediciones.gestor.FrmInicioGestor;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
@@ -116,14 +117,14 @@ public class FrmInicio extends JFrame implements ActionListener {
 
     private void actualizarTextoSensorUno(double val) {
         SwingUtilities.invokeLater(() -> {
-            String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
+            String unidad = rbPSIG.isSelected() ? "psig" : rbLbIn2.isSelected() ? "barg" : "kg/cm²";
             txtSensorUno.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
         });
     }
 
     private void actualizarTextoSensorDos(double val) {
         SwingUtilities.invokeLater(() -> {
-            String unidad = rbPSIG.isSelected() ? "PSIG" : rbLbIn2.isSelected() ? "Barg" : "kg/cm²";
+            String unidad = rbPSIG.isSelected() ? "psig" : rbLbIn2.isSelected() ? "barg" : "kg/cm²";
             txtSensorDos.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
         });
     }
@@ -141,7 +142,7 @@ public class FrmInicio extends JFrame implements ActionListener {
 
         int startXTop = (BASE_WIDTH - 660) / 2;
 
-        JLabel lblM = new JLabel("CS-PT1200 (0-10 Barg)");
+        JLabel lblM = new JLabel("CS-PT1200 (0-10 barg)");
         lblM.setBounds(startXTop, 70, 230, 20);
         scalablePanel.add(lblM);
         originalBounds.put(lblM, lblM.getBounds());
@@ -155,7 +156,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         scalablePanel.add(txtSensorUno);
         originalBounds.put(txtSensorUno, txtSensorUno.getBounds());
 
-        JLabel lblE = new JLabel("Endress-Hauser (0-100 Barg)");
+        JLabel lblE = new JLabel("Endress-Hauser (0-100 barg)");
         lblE.setBounds(startXTop + 280, 70, 230, 20);
         scalablePanel.add(lblE);
         originalBounds.put(lblE, lblE.getBounds());
@@ -173,9 +174,9 @@ public class FrmInicio extends JFrame implements ActionListener {
         unidadPanel.setLayout(new BoxLayout(unidadPanel, BoxLayout.Y_AXIS));
         unidadPanel.setBorder(LineBorder.createBlackLineBorder());
         unidadPanel.setBounds(startXTop + 560, 90, 100, 100);
-        rbPSIG = new JRadioButton("PSIG");
-        rbKgCm2 = new JRadioButton("Kg/cm²");
-        rbLbIn2 = new JRadioButton("Barg");
+        rbPSIG = new JRadioButton("psig");
+        rbKgCm2 = new JRadioButton("kg/cm²");
+        rbLbIn2 = new JRadioButton("barg");
         rbKgCm2.setSelected(true);
         unidadGroup = new ButtonGroup();
         unidadGroup.add(rbPSIG);
@@ -281,7 +282,7 @@ public class FrmInicio extends JFrame implements ActionListener {
             iniciarComunicacionSerial();
         });
 
-        versionLimitada(false);
+        versionLimitada();
 
         getContentPane().add(scalablePanel);
         collectFonts(getContentPane());
@@ -363,9 +364,9 @@ public class FrmInicio extends JFrame implements ActionListener {
     }
 
     public String getUnidadSeleccionada() {
-        if (rbKgCm2.isSelected()) return "Kg/cm²";
-        if (rbLbIn2.isSelected()) return "Barg";
-        return "PSIG";
+        if (rbKgCm2.isSelected()) return "kg/cm²";
+        if (rbLbIn2.isSelected()) return "barg";
+        return "psig";
     }
 
     public static void main(String[] args) {
@@ -381,12 +382,12 @@ public class FrmInicio extends JFrame implements ActionListener {
         });
     }
 
-    private void versionLimitada(boolean habilitado){
-        btnClientes.setEnabled(!habilitado);
-        btnOperador.setEnabled(!habilitado);
-        btnPlantas.setEnabled(!habilitado);
-        btnValvulas.setEnabled(!habilitado);
-        btnFluidos.setEnabled(!habilitado);
-        btnTiposValvula.setEnabled(!habilitado);
+    private void versionLimitada(){
+        btnClientes.setEnabled(!AppConfig.modoLimitado);
+        btnOperador.setEnabled(!AppConfig.modoLimitado);
+        btnPlantas.setEnabled(!AppConfig.modoLimitado);
+        btnValvulas.setEnabled(!AppConfig.modoLimitado);
+        btnFluidos.setEnabled(!AppConfig.modoLimitado);
+        btnTiposValvula.setEnabled(!AppConfig.modoLimitado);
     }
 }
