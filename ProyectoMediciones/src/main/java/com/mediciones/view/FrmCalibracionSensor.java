@@ -104,8 +104,8 @@ public class FrmCalibracionSensor extends JDialog {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
 
         sensorCombo = new JComboBox<>(new String[]{
-                "CS-PT1200 (0-10 Barg)",
-                "Endress-Hauser (0-100 Barg)",
+                "CS-PT1200 (0-10 barg)",
+                "Endress-Hauser (0-100 barg)",
                 "LM35 (Temperatura)"
         });
         sensorCombo.setFont(new Font("Arial", Font.BOLD, 20));
@@ -148,7 +148,7 @@ public class FrmCalibracionSensor extends JDialog {
         gbc.weighty = 0.2;
         add(puntosPanel, gbc);
 
-        lblPresionActual = new JLabel("0.00 Barg", SwingConstants.CENTER);
+        lblPresionActual = new JLabel("0.00 barg", SwingConstants.CENTER);
         lblPresionActual.setForeground(Color.WHITE);
         lblPresionActual.setOpaque(true);
         lblPresionActual.setBackground(new Color(0, 0, 150));
@@ -382,7 +382,7 @@ public class FrmCalibracionSensor extends JDialog {
                                         double c = selectedSensor.equals("CS-PT1200") ? c1 : (selectedSensor.equals("Endress-Hauser") ? c2 : 0.0); // LM35: c=0
                                         double finalVal = a * (currentRawVoltage - c);
                                         lblPresionActual.setText(String.format("%.2f %s", Math.max(0, finalVal),
-                                                selectedSensor.equals("LM35") ? "°C" : "Barg"));
+                                                selectedSensor.equals("LM35") ? "°C" : "barg"));
                                     });
                                 } catch (NumberFormatException ignored) {
                                 }

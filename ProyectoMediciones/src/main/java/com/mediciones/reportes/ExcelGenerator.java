@@ -7,6 +7,7 @@ import com.mediciones.model.Valvula;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.util.Units;
 import org.apache.poi.xddf.usermodel.PresetColor;
 import org.apache.poi.xddf.usermodel.XDDFColor;
 import org.apache.poi.xddf.usermodel.XDDFLineProperties;
@@ -204,62 +205,79 @@ public class ExcelGenerator {
 
     private void crearGrafico(List<Double> xValues, List<Double> yValues) {
         if (xValues.isEmpty()) return;
-        XSSFSheet sheetDatos = workbook.getSheet("Datos_Grafico");
-        if (sheetDatos == null) {
-            sheetDatos = sheet;
-        }
+        XSSFSheet sheetDatos = workbook.getSheet("Datos_Grafico") != null ? workbook.getSheet("Datos_Grafico") : sheet;
+
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
-        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 29, 10, 44);
+        XSSFChart chart = inicializarGraficoYAnclaje(drawing);
+
+        XDDFValueAxis xAxis = configurarEjeX(chart, xValues);
+        XDDFValueAxis yAxis = configurarEjeY(chart, yValues);
+
+        XDDFScatterChartData data = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, xAxis, yAxis);
+        agregarSeriesDeDatos(data, sheetDatos, xValues.size());
+
+        formatearTextosYCuadricula(chart);
+        configurarColoresDeFondo(chart);
+        maximizarAreaDeTrazado(chart);
+
+        chart.plot(data);
+    }
+
+    private XSSFChart inicializarGraficoYAnclaje(XSSFDrawing drawing) {
+        int marginPx = 3;
+        int dx = Units.toEMU(marginPx);
+        int dy = Units.toEMU(-marginPx);
+
+        XSSFClientAnchor anchor = drawing.createAnchor(dx, dx, dy, dy, 0, 29, 10, 44);
         XSSFChart chart = drawing.createChart(anchor);
         chart.setTitleText("Gráfico de Medición");
         chart.setTitleOverlay(false);
+        return chart;
+    }
 
+    private XDDFValueAxis configurarEjeX(XSSFChart chart, List<Double> xValues) {
         XDDFValueAxis xAxis = chart.createValueAxis(AxisPosition.BOTTOM);
         xAxis.setTitle("Tiempo (s)");
         xAxis.setVisible(true);
         xAxis.setNumberFormat("0.00");
+        xAxis.setCrosses(org.apache.poi.xddf.usermodel.chart.AxisCrosses.MIN);
         double maxX = xValues.get(xValues.size() - 1);
         xAxis.setMinimum(0.0);
         xAxis.setMaximum(maxX * 1.1);
-        double majorUnit = maxX / 10.0;
-        if (majorUnit < 0.1) majorUnit = 0.1;
-        xAxis.setMajorUnit(majorUnit);
 
+        double majorUnit = Math.max(maxX / 10.0, 0.1);
+        xAxis.setMajorUnit(majorUnit);
+        return xAxis;
+    }
+
+    private XDDFValueAxis configurarEjeY(XSSFChart chart, List<Double> yValues) {
         XDDFValueAxis yAxis = chart.createValueAxis(AxisPosition.LEFT);
         String unidad = medicion.getUnidadPresion() != null ? medicion.getUnidadPresion() : "Presión";
         yAxis.setTitle(unidad);
         yAxis.setVisible(true);
         yAxis.setNumberFormat("0.00");
-
+        yAxis.setCrosses(org.apache.poi.xddf.usermodel.chart.AxisCrosses.MIN);
         if (!yValues.isEmpty()) {
-            double minY = yValues.get(0);
-            double maxY = yValues.get(0);
+            double minY = yValues.stream().min(Double::compare).orElse(0.0);
+            double maxY = yValues.stream().max(Double::compare).orElse(0.0);
 
-            for (Double y : yValues) {
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-            }
-
-            double setPressure = 0.0;
             try {
-                setPressure = medicion.getPresionSolicitada();
-                if (setPressure < minY) minY = setPressure;
-                if (setPressure > maxY) maxY = setPressure;
-            } catch(Exception e) {
-            }
+                if (medicion.getPresionSolicitada() != null) {
+                    double setPressure = medicion.getPresionSolicitada();
+                    minY = Math.min(minY, setPressure);
+                    maxY = Math.max(maxY, setPressure);
+                }
+            } catch(Exception ignored) {}
+
             yAxis.setMinimum(minY);
-            double limiteSuperior = maxY * 1.15;
-            yAxis.setMaximum(limiteSuperior);
+            yAxis.setMaximum(maxY * 1.15);
         }
-        int numDatos = xValues.size();
+        return yAxis;
+    }
 
-        XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(
-                sheetDatos, new CellRangeAddress(0, numDatos - 1, 0, 0));
-
-        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(
-                sheetDatos, new CellRangeAddress(0, numDatos - 1, 1, 1));
-
-        XDDFScatterChartData data = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, xAxis, yAxis);
+    private void agregarSeriesDeDatos(XDDFScatterChartData data, XSSFSheet sheetDatos, int numDatos) {
+        XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheetDatos, new CellRangeAddress(0, numDatos - 1, 0, 0));
+        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheetDatos, new CellRangeAddress(0, numDatos - 1, 1, 1));
 
         XDDFScatterChartData.Series seriePresion = (XDDFScatterChartData.Series) data.addSeries(xs, ys);
         seriePresion.setTitle("Presión", null);
@@ -272,13 +290,8 @@ public class ExcelGenerator {
         seriePresion.setLineProperties(lineaRoja);
 
         if (medicion.getPresionSolicitada() != null) {
-            XDDFDataSource<Double> xsReferencia = XDDFDataSourcesFactory.fromNumericCellRange(
-                    sheetDatos, new CellRangeAddress(0, numDatos - 1, 0, 0));
-
-            XDDFNumericalDataSource<Double> ysReferencia = XDDFDataSourcesFactory.fromNumericCellRange(
-                    sheetDatos, new CellRangeAddress(0, numDatos - 1, 2, 2));
-
-            XDDFScatterChartData.Series serieReferencia = (XDDFScatterChartData.Series) data.addSeries(xsReferencia, ysReferencia);
+            XDDFNumericalDataSource<Double> ysReferencia = XDDFDataSourcesFactory.fromNumericCellRange(sheetDatos, new CellRangeAddress(0, numDatos - 1, 2, 2));
+            XDDFScatterChartData.Series serieReferencia = (XDDFScatterChartData.Series) data.addSeries(xs, ysReferencia);
             serieReferencia.setTitle("Presión Apertura Solicitada", null);
             serieReferencia.setSmooth(false);
             serieReferencia.setMarkerStyle(MarkerStyle.NONE);
@@ -288,65 +301,124 @@ public class ExcelGenerator {
             lineaAzul.setFillProperties(new XDDFSolidFillProperties(XDDFColor.from(PresetColor.BLUE)));
             serieReferencia.setLineProperties(lineaAzul);
 
-            CTScatterSer ctScatterSer = serieReferencia.getCTScatterSer();
-
-            CTDLbls dLbls = ctScatterSer.addNewDLbls();
-
-            dLbls.addNewShowVal().setVal(false);
-            dLbls.addNewShowLegendKey().setVal(false);
-            dLbls.addNewShowCatName().setVal(false);
-            dLbls.addNewShowSerName().setVal(false);
-
-            CTDLbl dLbl = dLbls.addNewDLbl();
-            dLbl.addNewIdx().setVal(numDatos-1);
-
-            // 1. APAGAMOS TODO (Incluso el ShowVal) para que Excel no intente mostrar el número crudo
-            dLbl.addNewShowVal().setVal(false);
-            dLbl.addNewShowCatName().setVal(false);
-            dLbl.addNewShowSerName().setVal(false);
-            dLbl.addNewShowLegendKey().setVal(false);
-            dLbl.addNewDLblPos().setVal(STDLblPos.R);
-
-            // 2. ARMAMOS EL TEXTO EXACTO (Ej: "1.00 barg")
-            Double valorSet = medicion.getPresionSolicitada() != null ? medicion.getPresionSolicitada() : 0.0;
-            String valorFormateado = String.format(java.util.Locale.US, "%.2f", valorSet).replace(".", ",");
-            String unidadEtiqueta = medicion.getUnidadPresion() != null ? medicion.getUnidadPresion().trim() : "";
-            String textoFinal = valorFormateado + " " + unidadEtiqueta;
-
-            // 3. INYECTAMOS EL TEXTO MANUALMENTE EN LA ETIQUETA
-            CTTx tx = dLbl.addNewTx();
-            CTTextBody rich = tx.addNewRich();
-            rich.addNewBodyPr();
-            rich.addNewLstStyle();
-            CTTextParagraph p = rich.addNewP();
-            CTRegularTextRun r = p.addNewR();
-            r.setT(textoFinal);
+            inyectarEtiquetaXML(serieReferencia, numDatos);
         }
+    }
 
-        formatearTituloXML(chart.getCTChart().getTitle());
+    private void inyectarEtiquetaXML(XDDFScatterChartData.Series serieReferencia, int numDatos) {
+        CTScatterSer ctScatterSer = serieReferencia.getCTScatterSer();
+        CTDLbls dLbls = ctScatterSer.addNewDLbls();
+        dLbls.addNewShowVal().setVal(false);
+        dLbls.addNewShowLegendKey().setVal(false);
+        dLbls.addNewShowCatName().setVal(false);
+        dLbls.addNewShowSerName().setVal(false);
+
+        CTDLbl dLbl = dLbls.addNewDLbl();
+        dLbl.addNewIdx().setVal(numDatos-1);
+        dLbl.addNewShowVal().setVal(false);
+        dLbl.addNewShowCatName().setVal(false);
+        dLbl.addNewShowSerName().setVal(false);
+        dLbl.addNewShowLegendKey().setVal(false);
+        dLbl.addNewDLblPos().setVal(STDLblPos.R);
+
+        Double valorSet = medicion.getPresionSolicitada() != null ? medicion.getPresionSolicitada() : 0.0;
+        String valorFormateado = String.format(java.util.Locale.US, "%.2f", valorSet).replace(".", ",");
+        String unidadEtiqueta = medicion.getUnidadPresion() != null ? medicion.getUnidadPresion().trim() : "";
+
+        CTTx tx = dLbl.addNewTx();
+        CTTextBody rich = tx.addNewRich();
+        rich.addNewBodyPr();
+        rich.addNewLstStyle();
+        CTTextParagraph p = rich.addNewP();
+        CTRegularTextRun r = p.addNewR();
+        r.setT(valorFormateado + " " + unidadEtiqueta);
+
+        CTTextCharacterProperties rPr = r.addNewRPr();
+        rPr.setB(true);
+        CTSolidColorFillProperties fill = rPr.addNewSolidFill();
+        fill.addNewSrgbClr().setVal(new byte[]{0, 0, 0});
+    }
+
+    private void formatearTextosYCuadricula(XSSFChart chart) {
+        formatearTituloXML(chart.getCTChart().getTitle(), 1200);
 
         for (CTValAx valAx : chart.getCTChart().getPlotArea().getValAxArray()) {
-            if (valAx.isSetTitle()) {
-                formatearTituloXML(valAx.getTitle());
-            }
+            if (valAx.isSetTitle()) formatearTituloXML(valAx.getTitle(), 900);
+
             CTNumFmt numFmt = valAx.isSetNumFmt() ? valAx.getNumFmt() : valAx.addNewNumFmt();
             numFmt.setFormatCode("0.00");
             numFmt.setSourceLinked(false);
+
+            org.openxmlformats.schemas.drawingml.x2006.main.CTTextBody txPr = valAx.isSetTxPr() ? valAx.getTxPr() : valAx.addNewTxPr();
+            if (txPr.getBodyPr() == null) txPr.addNewBodyPr();
+            if (!txPr.isSetLstStyle()) txPr.addNewLstStyle();
+
+            org.openxmlformats.schemas.drawingml.x2006.main.CTTextParagraph p = txPr.sizeOfPArray() > 0 ? txPr.getPArray(0) : txPr.addNewP();
+            org.openxmlformats.schemas.drawingml.x2006.main.CTTextCharacterProperties defRPr = (p.isSetPPr() && p.getPPr().isSetDefRPr())
+                    ? p.getPPr().getDefRPr() : (p.isSetPPr() ? p.getPPr().addNewDefRPr() : p.addNewPPr().addNewDefRPr());
+
+            defRPr.setSz(800);
+            org.openxmlformats.schemas.drawingml.x2006.main.CTSolidColorFillProperties textFill = defRPr.isSetSolidFill() ? defRPr.getSolidFill() : defRPr.addNewSolidFill();
+            textFill.addNewSrgbClr().setVal(new byte[]{0, 0, 0});
 
             if (!valAx.isSetMajorGridlines()) {
                 CTChartLines gridlines = valAx.addNewMajorGridlines();
                 CTShapeProperties spPr = gridlines.addNewSpPr();
                 CTLineProperties ln = spPr.addNewLn();
                 ln.setW(9525);
-
                 CTSolidColorFillProperties fill = ln.addNewSolidFill();
-                CTSRgbColor clr = fill.addNewSrgbClr();
-
-                clr.setVal(new byte[]{(byte) 211, (byte) 211, (byte) 211});
+                fill.addNewSrgbClr().setVal(new byte[]{(byte) 211, (byte) 211, (byte) 211});
             }
         }
+    }
 
-        chart.plot(data);
+    private void configurarColoresDeFondo(XSSFChart chart) {
+        // Fondo degradado del gráfico principal
+        org.openxmlformats.schemas.drawingml.x2006.main.CTShapeProperties chartSpPr = chart.getCTChartSpace().isSetSpPr() ? chart.getCTChartSpace().getSpPr() : chart.getCTChartSpace().addNewSpPr();
+        if (chartSpPr.isSetSolidFill()) chartSpPr.unsetSolidFill();
+
+        org.openxmlformats.schemas.drawingml.x2006.main.CTGradientFillProperties gradFill = chartSpPr.isSetGradFill() ? chartSpPr.getGradFill() : chartSpPr.addNewGradFill();
+        org.openxmlformats.schemas.drawingml.x2006.main.CTGradientStopList gsLst = gradFill.isSetGsLst() ? gradFill.getGsLst() : gradFill.addNewGsLst();
+        if (gsLst.sizeOfGsArray() > 0) gsLst.setGsArray(new org.openxmlformats.schemas.drawingml.x2006.main.CTGradientStop[0]);
+
+        org.openxmlformats.schemas.drawingml.x2006.main.CTGradientStop gs1 = gsLst.addNewGs();
+        gs1.setPos(0);
+        gs1.addNewSrgbClr().setVal(new byte[]{(byte) 141, (byte) 179, (byte) 226});
+
+        org.openxmlformats.schemas.drawingml.x2006.main.CTGradientStop gs2 = gsLst.addNewGs();
+        gs2.setPos(100000);
+        gs2.addNewSrgbClr().setVal(new byte[]{(byte) 219, (byte) 229, (byte) 241});
+
+        org.openxmlformats.schemas.drawingml.x2006.main.CTLinearShadeProperties lin = gradFill.isSetLin() ? gradFill.getLin() : gradFill.addNewLin();
+        lin.setAng(5400000);
+
+        // Fondo del área de trazado interna
+        org.openxmlformats.schemas.drawingml.x2006.chart.CTPlotArea plotArea = chart.getCTChart().getPlotArea();
+        org.openxmlformats.schemas.drawingml.x2006.main.CTShapeProperties plotSpPr = plotArea.isSetSpPr() ? plotArea.getSpPr() : plotArea.addNewSpPr();
+        org.openxmlformats.schemas.drawingml.x2006.main.CTSolidColorFillProperties plotFill = plotSpPr.isSetSolidFill() ? plotSpPr.getSolidFill() : plotSpPr.addNewSolidFill();
+
+        org.openxmlformats.schemas.drawingml.x2006.main.CTSRgbColor plotClr = plotFill.isSetSrgbClr() ? plotFill.getSrgbClr() : plotFill.addNewSrgbClr();
+        plotClr.setVal(new byte[]{(byte) 219, (byte) 229, (byte) 241});
+    }
+
+    private void maximizarAreaDeTrazado(XSSFChart chart) {
+        org.openxmlformats.schemas.drawingml.x2006.chart.CTPlotArea plotArea = chart.getCTChart().getPlotArea();
+        org.openxmlformats.schemas.drawingml.x2006.chart.CTLayout ctLayout = plotArea.isSetLayout() ? plotArea.getLayout() : plotArea.addNewLayout();
+        org.openxmlformats.schemas.drawingml.x2006.chart.CTManualLayout manualLayout = ctLayout.isSetManualLayout() ? ctLayout.getManualLayout() : ctLayout.addNewManualLayout();
+
+        manualLayout.addNewXMode().setVal(org.openxmlformats.schemas.drawingml.x2006.chart.STLayoutMode.EDGE);
+        manualLayout.addNewYMode().setVal(org.openxmlformats.schemas.drawingml.x2006.chart.STLayoutMode.EDGE);
+        manualLayout.addNewWMode().setVal(org.openxmlformats.schemas.drawingml.x2006.chart.STLayoutMode.EDGE);
+        manualLayout.addNewHMode().setVal(org.openxmlformats.schemas.drawingml.x2006.chart.STLayoutMode.EDGE);
+
+        // Margen izquierdo para las etiquetas del eje Y
+        manualLayout.addNewX().setVal(0.025);
+        // Margen superior pequeño (título, si lo hay)
+        manualLayout.addNewY().setVal(0.1);
+        // Ancho: casi todo el espacio restante hacia la derecha
+        manualLayout.addNewW().setVal(0.99);
+        // Alto: deja espacio abajo para las etiquetas del eje X
+        manualLayout.addNewH().setVal(0.96);
     }
 
     private void guardarArchivoExcel(String archivoExcel) throws IOException {
@@ -356,7 +428,7 @@ public class ExcelGenerator {
         workbook.close();
     }
 
-    private void formatearTituloXML(CTTitle ctTitle) {
+    private void formatearTituloXML(CTTitle ctTitle, int tamanioCentecimas) {
         if (ctTitle != null && ctTitle.isSetTx() && ctTitle.getTx().isSetRich()) {
             CTTextParagraph p = ctTitle.getTx().getRich().getPArray(0);
             CTTextCharacterProperties rPr;
@@ -366,8 +438,13 @@ public class ExcelGenerator {
             } else {
                 rPr = p.isSetPPr() && p.getPPr().isSetDefRPr() ? p.getPPr().getDefRPr() : p.addNewPPr().addNewDefRPr();
             }
-            rPr.setSz(1300);
-            rPr.setB(false);
+            rPr.setSz(tamanioCentecimas); // Aplicamos el tamaño recibido
+            rPr.setB(true);               // Mantenemos la negrita
+
+            // Forzar color negro (RGB: 0, 0, 0)
+            CTSolidColorFillProperties fill = rPr.isSetSolidFill() ? rPr.getSolidFill() : rPr.addNewSolidFill();
+            CTSRgbColor clr = fill.isSetSrgbClr() ? fill.getSrgbClr() : fill.addNewSrgbClr();
+            clr.setVal(new byte[]{0, 0, 0});
         }
     }
 }

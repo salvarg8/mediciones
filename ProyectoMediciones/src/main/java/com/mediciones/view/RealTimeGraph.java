@@ -1,6 +1,7 @@
 package com.mediciones.view;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.mediciones.config.AppConfig;
 import com.mediciones.gestor.RealTimeGraphGestor;
 import com.mediciones.model.*;
 import com.mediciones.utils.ValidadorUI;
@@ -52,7 +53,7 @@ public class RealTimeGraph extends JFrame {
     private int originalWidth = 900;
     private int originalHeight = 750;
 
-    private String selectedPressureUnit = "Kg/cm²";
+    private String selectedPressureUnit = "kg/cm²";
 
     private JPanel northPanel;
     private JComboBox<String> cmbSensor;
@@ -237,9 +238,9 @@ public class RealTimeGraph extends JFrame {
 
         grupoUnidades = new ButtonGroup();
 
-        rbtnPSIG = new JRadioButton("PSIG");
-        rbtnKgCm2 = new JRadioButton("Kg/cm²");
-        rbtnBarg = new JRadioButton("Barg");
+        rbtnPSIG = new JRadioButton("psig");
+        rbtnKgCm2 = new JRadioButton("kg/cm²");
+        rbtnBarg = new JRadioButton("barg");
 
         grupoUnidades.add(rbtnKgCm2);
         grupoUnidades.add(rbtnBarg);
@@ -285,7 +286,7 @@ public class RealTimeGraph extends JFrame {
 
         gbcSensor.insets = new Insets(2, 5, 5, 5);
         gbcSensor.fill = GridBagConstraints.HORIZONTAL;
-        String[] sensores = {"CS-PT1200 (0-10 Barg)", "Endress-Hauser (0-100 Barg)"};
+        String[] sensores = {"CS-PT1200 (0-10 barg)", "Endress-Hauser (0-100 barg)"};
         cmbSensor = new JComboBox<>(sensores);
         gbcSensor.gridx = 0;
         gbcSensor.gridy = 0;
@@ -527,8 +528,11 @@ public class RealTimeGraph extends JFrame {
 
                 double pressure = Double.parseDouble(pressureRequestedField.getText().trim().replace(",", "."));
 
-                //gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
-                gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                if(AppConfig.modoSimulado){
+                    gestor.startSimulatedDataCapture((Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                } else {
+                    gestor.startDataCapture(portCombo, baudCombo, (Cliente) cmbCliente.getSelectedItem(), (Valvula) cmbValvula.getSelectedItem(), pressure);
+                }
             } else {
                 gestor.stopDataCapture((Valvula) cmbValvula.getSelectedItem(), (Operador) cmbOperador.getSelectedItem(), (Fluido) cmbFluido.getSelectedItem());
             }
@@ -685,9 +689,9 @@ public class RealTimeGraph extends JFrame {
 
     public void setUnidadSeleccionada(String unidad) {
         if (unidad != null) {
-            if (unidad.equals("Kg/cm²")) {
+            if (unidad.equals("kg/cm²")) {
                 rbtnKgCm2.setSelected(true);
-            } else if (unidad.equals("Barg")) {
+            } else if (unidad.equals("barg")) {
                 rbtnBarg.setSelected(true);
             } else {
                 rbtnPSIG.setSelected(true);
@@ -696,9 +700,9 @@ public class RealTimeGraph extends JFrame {
     }
 
     public String getUnidadSeleccionada() {
-        if (rbtnKgCm2.isSelected()) return "Kg/cm²";
-        if (rbtnBarg.isSelected()) return "Barg";
-        return "PSIG";
+        if (rbtnKgCm2.isSelected()) return "kg/cm²";
+        if (rbtnBarg.isSelected()) return "barg";
+        return "psig";
     }
 
     private void updateChartUnit() {
