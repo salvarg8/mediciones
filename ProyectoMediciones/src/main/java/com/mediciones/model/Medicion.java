@@ -12,7 +12,7 @@ public class Medicion {
     private final Operador operador;
     private final Fluido fluido;
     private final Double presionSolicitada;
-    private final String unidadPresion;
+    private String unidadPresion;
 
     // 2. DATOS DE RESULTADO: Se calculan durante o al final (NO pueden ser final)
     private Double maximo;
@@ -69,6 +69,10 @@ public class Medicion {
     public Fluido getFluido() { return fluido; }
     public Double getPresionSolicitada() { return presionSolicitada; }
     public String getUnidadPresion() { return unidadPresion; }
+
+    public void setUnidadPresion(String unidadPresion) {
+        this.unidadPresion = unidadPresion;
+    }
 
     public Double getMaximo() { return maximo; }
     public Double getRecuperacion() { return recuperacion; }

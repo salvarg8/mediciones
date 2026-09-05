@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.mediciones.config.AppConfig;
 import com.mediciones.gestor.RealTimeGraphGestor;
 import com.mediciones.model.*;
+import com.mediciones.utils.ConversionUnidadesUtil;
 import com.mediciones.utils.ValidadorUI;
 import com.mediciones.view.components.Button3D;
 import org.jfree.chart.ChartFactory;
@@ -664,7 +665,6 @@ public class RealTimeGraph extends JFrame {
     public void resetCaptureUI() {
         SwingUtilities.invokeLater(() -> {
             startStopButton.setText("Iniciar toma de datos (F11)");
-            setInfoFieldsEnabled(true);
         });
     }
 
@@ -705,15 +705,91 @@ public class RealTimeGraph extends JFrame {
         return "psig";
     }
 
+    // --- MÉTODOS AUXILIARES ---
+
+    private void convertirIndicador(JLabel label, double factor) {
+        try {
+            String texto = label.getText().replace(",", ".");
+            if (!texto.equals("-") && !texto.isEmpty()) {
+                double valor = Double.parseDouble(texto);
+                label.setText(String.format(java.util.Locale.US, "%.2f", valor * factor));
+            }
+        } catch (NumberFormatException e) {
+            // Ignoramos silenciosamente si tiene un guion "-"
+        }
+    }
+
+    private double calcularFactorConversion(String origen, String destino) {
+        // Primero llevamos la unidad de origen a una base estándar (Barg)
+        double factorBarg = 1.0;
+        if (origen.equalsIgnoreCase("psig")) factorBarg = 1.0 / 14.5038;
+        else if (origen.equalsIgnoreCase("kg/cm²")) factorBarg = 1.0 / 1.01972;
+
+        // Luego la multiplicamos por la unidad de destino
+        if (destino.equalsIgnoreCase("psig")) return factorBarg * 14.5038;
+        if (destino.equalsIgnoreCase("kg/cm²")) return factorBarg * 1.01972;
+        return factorBarg; // Si el destino es Barg
+    }
+
+    private ConversionUnidadesUtil.UnidadPresion getUnidadEnum(String unidadStr) {
+        if (unidadStr.equalsIgnoreCase("kg/cm²") || unidadStr.equalsIgnoreCase("kg/cm2")) {
+            return ConversionUnidadesUtil.UnidadPresion.KGCM2;
+        } else if (unidadStr.equalsIgnoreCase("barg")) {
+            return ConversionUnidadesUtil.UnidadPresion.BARG;
+        }
+        return ConversionUnidadesUtil.UnidadPresion.PSIG;
+    }
+
     private void updateChartUnit() {
-        String unidad = getUnidadSeleccionada();
+        String nuevaUnidadStr = getUnidadSeleccionada();
 
-        selectedPressureUnit = unidad;
+        // Evitar que se recalcule si hacen clic en la misma unidad
+        if (selectedPressureUnit.equals(nuevaUnidadStr)) return;
 
-        series.setKey("Presión (" + unidad + ")");
+        ConversionUnidadesUtil.UnidadPresion origen = getUnidadEnum(selectedPressureUnit);
+        ConversionUnidadesUtil.UnidadPresion destino = getUnidadEnum(nuevaUnidadStr);
 
+        // 1. LA PRESIÓN SOLICITADA NO SE TOCA (Omitimos el TextField a pedido tuyo)
+
+        // 2. Convertir los indicadores gigantes de la pantalla
+        convertirIndicador(valueLabel, origen, destino);
+        convertirIndicador(maxLabel, origen, destino);
+        convertirIndicador(recLabel, origen, destino);
+        // tempLabel no se convierte porque la temperatura siempre es °C
+
+        // 3. Convertir todos los puntos históricos de la gráfica azul
+        for (int i = 0; i < series.getItemCount(); i++) {
+            double y = series.getY(i).doubleValue();
+            double nuevoY = ConversionUnidadesUtil.convertirPresion(y, origen, destino);
+            series.updateByIndex(i, nuevoY);
+        }
+
+        // 4. Actualizar las etiquetas y escalar los límites del Eje Y
+        selectedPressureUnit = nuevaUnidadStr;
+        series.setKey("Presión (" + nuevaUnidadStr + ")");
         XYPlot plot = chart.getXYPlot();
         NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setLabel("Presión (" + unidad + ")");
+        rangeAxis.setLabel("Presión (" + nuevaUnidadStr + ")");
+
+        rangeAxis.setLowerBound(ConversionUnidadesUtil.convertirPresion(rangeAxis.getLowerBound(), origen, destino));
+        rangeAxis.setUpperBound(ConversionUnidadesUtil.convertirPresion(rangeAxis.getUpperBound(), origen, destino));
+
+        // 5. Avisarle al Gestor usando el Enum
+        if (gestor != null) {
+            gestor.aplicarCambioUnidad(origen, destino, nuevaUnidadStr);
+        }
+    }
+
+    private void convertirIndicador(JLabel label, ConversionUnidadesUtil.UnidadPresion origen, ConversionUnidadesUtil.UnidadPresion destino) {
+        try {
+            String texto = label.getText().replace(",", ".");
+            if (!texto.equals("-") && !texto.isEmpty()) {
+                double valor = Double.parseDouble(texto);
+                double valorConvertido = ConversionUnidadesUtil.convertirPresion(valor, origen, destino);
+                label.setText(String.format(java.util.Locale.US, "%.2f", valorConvertido));
+            }
+        } catch (NumberFormatException e) {
+            // Ignoramos silenciosamente si tiene un guion "-"
+        }
     }
 }

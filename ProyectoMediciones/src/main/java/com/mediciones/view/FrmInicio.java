@@ -10,6 +10,16 @@ import javax.swing.border.LineBorder;
 
 import com.mediciones.config.AppConfig;
 import com.mediciones.gestor.FrmInicioGestor;
+import com.mediciones.utils.ConversionUnidadesUtil;
+import com.mediciones.view.FrmCalibracionSensor;
+import com.mediciones.view.FrmClienteCRUD;
+import com.mediciones.view.FrmConfiguracion;
+import com.mediciones.view.FrmFluidosCRUD;
+import com.mediciones.view.FrmOperadorCRUD;
+import com.mediciones.view.FrmPlantaCRUD;
+import com.mediciones.view.FrmTipoValvulaCRUD;
+import com.mediciones.view.FrmValvulasCRUD;
+import com.mediciones.view.RealTimeGraph;
 import com.mediciones.view.components.Button3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +30,11 @@ public class FrmInicio extends JFrame implements ActionListener {
 
     private JTextArea txtSensorUno;
     private JTextArea txtSensorDos;
+
     private JRadioButton rbPSIG;
     private JRadioButton rbKgCm2;
-    private JRadioButton rbLbIn2;
+    private JRadioButton rbBarg;
+
     private ButtonGroup unidadGroup;
     private JComboBox<String> cbPuertos;
 
@@ -31,7 +43,7 @@ public class FrmInicio extends JFrame implements ActionListener {
     private Button3D btnValvulas;
     private Button3D btnFluidos;
     private Button3D btnPlantas;
-    private Button3D btnTiposValvula; // NUEVO: Declarado aquí
+    private Button3D btnTiposValvula;
     private Button3D btnCalibracion;
     private Button3D btnMedicion;
     private Button3D btnSalir;
@@ -43,13 +55,19 @@ public class FrmInicio extends JFrame implements ActionListener {
 
     private static final int BASE_WIDTH = 850;
     private static final int BASE_HEIGHT = 550;
+
     private JPanel scalablePanel;
+
     private Map<Component, Rectangle> originalBounds = new HashMap<>();
+
+    // Registro de tiempo para evitar clics múltiples
+    private Map<Component, Long> lastClickTime = new HashMap<>();
+
     private static final float BASE_FONT_SENSOR = 30f;
+
     private Map<Component, Font> originalFonts = new HashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(FrmInicio.class);
-
 
     public FrmInicio() {
         this.controller = new FrmInicioGestor(this);
@@ -60,16 +78,17 @@ public class FrmInicio extends JFrame implements ActionListener {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         initComponents();
+
         controller.cargarConstantesCalibracion();
 
         setPreferredSize(new Dimension(BASE_WIDTH, BASE_HEIGHT));
         setMinimumSize(new Dimension(BASE_WIDTH, BASE_HEIGHT));
+
         pack();
 
         SwingUtilities.invokeLater(() -> {
             try {
                 Thread.sleep(500);
-
                 if (validarSiExisteConfiguracion()) {
                     iniciarComunicacionSerial();
                 }
@@ -90,7 +109,6 @@ public class FrmInicio extends JFrame implements ActionListener {
         if (!controller.existeConfiguracion()) {
             FrmConfiguracion frmConfig = new FrmConfiguracion();
             frmConfig.setLocationRelativeTo(this);
-
             frmConfig.addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosed(java.awt.event.WindowEvent e) {
@@ -98,35 +116,67 @@ public class FrmInicio extends JFrame implements ActionListener {
                     iniciarComunicacionSerial();
                 }
             });
-
             frmConfig.setVisible(true);
             return false;
         }
         return true;
     }
 
+    /**
+     * Inicia la comunicación serial utilizando la unidad seleccionada.
+     */
     private void iniciarComunicacionSerial() {
+        // En lugar de enviar la unidad estática y quemarla en el lambda, enviamos solo "val"
         controller.iniciarComunicacionSerial(
                 (String) cbPuertos.getSelectedItem(),
-                rbPSIG.isSelected(),
-                rbLbIn2.isSelected(),
-                val -> actualizarTextoSensorUno(val),
-                val -> actualizarTextoSensorDos(val)
+                getUnidadPresionSeleccionada(),
+                this::actualizarTextoSensorUno, // Pasa dinámico
+                this::actualizarTextoSensorDos  // Pasa dinámico
         );
     }
 
+    /**
+     * Obtiene la unidad de presión seleccionada (Enum).
+     */
+    private ConversionUnidadesUtil.UnidadPresion getUnidadPresionSeleccionada() {
+        if (rbPSIG.isSelected()) {
+            return ConversionUnidadesUtil.UnidadPresion.PSIG;
+        }
+        if (rbBarg.isSelected()) {
+            return ConversionUnidadesUtil.UnidadPresion.BARG;
+        }
+        return ConversionUnidadesUtil.UnidadPresion.KGCM2;
+    }
+
+    /**
+     * Actualiza el valor mostrado del sensor 1 en tiempo real.
+     */
     private void actualizarTextoSensorUno(double val) {
+        // Busca la unidad en este milisegundo exacto
+        ConversionUnidadesUtil.UnidadPresion unidadActual = getUnidadPresionSeleccionada();
         SwingUtilities.invokeLater(() -> {
-            String unidad = rbPSIG.isSelected() ? "psig" : rbLbIn2.isSelected() ? "barg" : "kg/cm²";
-            txtSensorUno.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+            txtSensorUno.setText(String.format("\n  %.2f %s", val, getTextoUnidad(unidadActual)));
         });
     }
 
+    /**
+     * Actualiza el valor mostrado del sensor 2 en tiempo real.
+     */
     private void actualizarTextoSensorDos(double val) {
+        // Busca la unidad en este milisegundo exacto
+        ConversionUnidadesUtil.UnidadPresion unidadActual = getUnidadPresionSeleccionada();
         SwingUtilities.invokeLater(() -> {
-            String unidad = rbPSIG.isSelected() ? "psig" : rbLbIn2.isSelected() ? "barg" : "kg/cm²";
-            txtSensorDos.setText(String.format("\n  %.2f %s", Double.valueOf(val), unidad));
+            txtSensorDos.setText(String.format("\n  %.2f %s", val, getTextoUnidad(unidadActual)));
         });
+    }
+
+    private String getTextoUnidad(ConversionUnidadesUtil.UnidadPresion unidad) {
+        switch (unidad) {
+            case PSIG: return "psig";
+            case BARG: return "barg";
+            case KGCM2: return "kg/cm²";
+            default: return "";
+        }
     }
 
     private void initComponents() {
@@ -174,23 +224,37 @@ public class FrmInicio extends JFrame implements ActionListener {
         unidadPanel.setLayout(new BoxLayout(unidadPanel, BoxLayout.Y_AXIS));
         unidadPanel.setBorder(LineBorder.createBlackLineBorder());
         unidadPanel.setBounds(startXTop + 560, 90, 100, 100);
+
         rbPSIG = new JRadioButton("psig");
         rbKgCm2 = new JRadioButton("kg/cm²");
-        rbLbIn2 = new JRadioButton("barg");
+        rbBarg = new JRadioButton("barg");
         rbKgCm2.setSelected(true);
+
         unidadGroup = new ButtonGroup();
         unidadGroup.add(rbPSIG);
         unidadGroup.add(rbKgCm2);
-        unidadGroup.add(rbLbIn2);
+        unidadGroup.add(rbBarg);
+
+        // --- CÓDIGO NUEVO: Escuchar clics y avisar al gestor en tiempo real ---
+        ActionListener unitListener = e -> {
+            if (controller != null) {
+                controller.setUnidadDestino(getUnidadPresionSeleccionada());
+            }
+        };
+
+        rbPSIG.addActionListener(unitListener);
+        rbKgCm2.addActionListener(unitListener);
+        rbBarg.addActionListener(unitListener);
+        // ----------------------------------------------------------------------
+
         unidadPanel.add(rbPSIG);
         unidadPanel.add(rbKgCm2);
-        unidadPanel.add(rbLbIn2);
+        unidadPanel.add(rbBarg);
         scalablePanel.add(unidadPanel);
         originalBounds.put(unidadPanel, unidadPanel.getBounds());
 
         int startXBtn = (BASE_WIDTH - 680) / 2;
 
-        // --- FILA 1 ---
         btnClientes = new Button3D("Clientes", new Color(236, 239, 241), true);
         btnClientes.setBounds(startXBtn, 230, 120, 40);
         btnOperador = new Button3D("Operador", new Color(236, 239, 241), true);
@@ -202,7 +266,6 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnReconectar = new Button3D("Refrescar", new Color(224, 247, 250), true);
         btnReconectar.setBounds(startXBtn + 560, 230, 120, 40);
 
-        // --- FILA 2 ---
         btnValvulas = new Button3D("Válvulas", new Color(236, 239, 241), true);
         btnValvulas.setBounds(startXBtn, 290, 120, 40);
         btnFluidos = new Button3D("Fluidos", new Color(236, 239, 241), true);
@@ -214,7 +277,6 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnCalibracion = new Button3D("Calibrar", new Color(255, 249, 196), true);
         btnCalibracion.setBounds(startXBtn + 560, 290, 120, 40);
 
-        // --- FILA 3 ---
         btnSalir = new Button3D("Salir", new Color(255, 200, 200), true);
         btnSalir.setBounds((BASE_WIDTH - 120) / 2, 350, 120, 40);
 
@@ -245,13 +307,14 @@ public class FrmInicio extends JFrame implements ActionListener {
         JPanel comPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
         comPanel.setBounds(BASE_WIDTH / 2 - 140, 400, 280, 35);
         comPanel.setBorder(LineBorder.createBlackLineBorder());
+
         lblIndicadorComunicacion = new JLabel(" ");
         lblIndicadorComunicacion.setPreferredSize(new Dimension(15, 15));
         lblIndicadorComunicacion.setOpaque(true);
         lblIndicadorComunicacion.setBackground(Color.RED);
+
         cbPuertos = new JComboBox<>();
         controller.actualizarListaPuertos(cbPuertos);
-
         cbPuertos.addActionListener(e -> {
             controller.detenerComunicacionSerial();
             iniciarComunicacionSerial();
@@ -263,7 +326,6 @@ public class FrmInicio extends JFrame implements ActionListener {
         scalablePanel.add(comPanel);
         originalBounds.put(comPanel, comPanel.getBounds());
 
-        // Agregar listeners a los botones
         btnClientes.addActionListener(this);
         btnOperador.addActionListener(this);
         btnValvulas.addActionListener(this);
@@ -273,6 +335,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         btnConfiguracion.addActionListener(this);
         btnCalibracion.addActionListener(this);
         btnMedicion.addActionListener(this);
+
         btnSalir.addActionListener(e -> {
             controller.detenerComunicacionSerial();
             System.exit(0);
@@ -316,8 +379,9 @@ public class FrmInicio extends JFrame implements ActionListener {
     }
 
     public void setEstadoComunicacion(boolean conectado) {
-        if (lblIndicadorComunicacion != null)
+        if (lblIndicadorComunicacion != null) {
             lblIndicadorComunicacion.setBackground(conectado ? Color.GREEN : Color.RED);
+        }
     }
 
     @Override
@@ -326,16 +390,18 @@ public class FrmInicio extends JFrame implements ActionListener {
     }
 
     private void handleButtonAction(Object source) {
-        JButton button = (JButton) source;
-        button.setEnabled(false); // Deshabilitar el botón inmediatamente
+        Component btn = (Component) source;
+        long currentTime = System.currentTimeMillis();
 
-        // Usar un Timer para reactivar el botón después de 1 segundo
-        Timer timer = new Timer(1000, evt -> button.setEnabled(true));
-        timer.setRepeats(false);
-        timer.start();
+        // Control seguro para ignorar clics seguidos antes de 1 segundo
+        if (lastClickTime.containsKey(btn) && (currentTime - lastClickTime.get(btn) < 1000)) {
+            return;
+        }
+        lastClickTime.put(btn, currentTime);
 
         controller.detenerComunicacionSerial();
         Window f = null;
+
         if (source == btnClientes) f = new FrmClienteCRUD();
         else if (source == btnOperador) f = new FrmOperadorCRUD();
         else if (source == btnValvulas) f = new FrmValvulasCRUD();
@@ -346,7 +412,7 @@ public class FrmInicio extends JFrame implements ActionListener {
         else if (source == btnCalibracion) f = new FrmCalibracionSensor();
         else if (source == btnMedicion) {
             RealTimeGraph graph = RealTimeGraph.getInstance();
-            graph.setUnidadSeleccionada(getUnidadSeleccionada());
+            graph.setUnidadSeleccionada(getUnidadSeleccionadaString());
             f = graph;
         }
 
@@ -363,9 +429,10 @@ public class FrmInicio extends JFrame implements ActionListener {
         }
     }
 
-    public String getUnidadSeleccionada() {
+    // Se conserva para mantener compatibilidad con RealTimeGraph si lo necesita en formato String
+    public String getUnidadSeleccionadaString() {
         if (rbKgCm2.isSelected()) return "kg/cm²";
-        if (rbLbIn2.isSelected()) return "barg";
+        if (rbBarg.isSelected()) return "barg";
         return "psig";
     }
 
@@ -375,14 +442,13 @@ public class FrmInicio extends JFrame implements ActionListener {
         } catch (Exception e) {
             logger.error("Error al configurar el Look and Feel", e);
         }
-
         SwingUtilities.invokeLater(() -> {
             FrmInicio frame = new FrmInicio();
             frame.setVisible(true);
         });
     }
 
-    private void versionLimitada(){
+    private void versionLimitada() {
         btnClientes.setEnabled(!AppConfig.modoLimitado);
         btnOperador.setEnabled(!AppConfig.modoLimitado);
         btnPlantas.setEnabled(!AppConfig.modoLimitado);
