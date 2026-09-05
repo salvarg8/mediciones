@@ -48,6 +48,11 @@ public class RealTimeGraphGestor {
     private boolean reporteGenerado = false;
     private String rutaUltimoReporte = null;
 
+    // --- VARIABLES PARA EL SIMULADOR DE LA GRÁFICA ---
+    private volatile double simValSensor1 = 0.0;
+    private volatile double simValSensor2 = 0.0;
+    private JFrame ventanaSimuladorGrafico;
+
     private static final Logger logger = LoggerFactory.getLogger(RealTimeGraphGestor.class);
 
     public RealTimeGraphGestor(RealTimeGraph view) {
@@ -365,6 +370,11 @@ public class RealTimeGraphGestor {
             dataThread.interrupt();
         }
         view.resetCaptureUI();
+
+        if (ventanaSimuladorGrafico != null) {
+            ventanaSimuladorGrafico.dispose();
+            ventanaSimuladorGrafico = null;
+        }
     }
 
     public void guardarExcel(Cliente cliente, Valvula valvula, Operador operador, Fluido fluido) {
@@ -543,11 +553,8 @@ public class RealTimeGraphGestor {
         rutaUltimoReporte = null;
 
         medicionActual = new Medicion(
-                valvula,
-                cliente,
-                view.getSelectedOperador(),
-                view.getSelectedFluido(),
-                currentPressureRequested,
+                valvula, cliente, view.getSelectedOperador(),
+                view.getSelectedFluido(), currentPressureRequested,
                 view.getSelectedPressureUnit()
         );
 
@@ -560,7 +567,6 @@ public class RealTimeGraphGestor {
 
         try {
             view.setLedColor(Color.ORANGE);
-
             resetValues();
             view.clearChart();
 
@@ -568,28 +574,29 @@ public class RealTimeGraphGestor {
             view.setStartButtonText("Detener (F11)");
             view.setInfoFieldsEnabled(false);
 
+            // 1. Iniciar los sliders en 0 (compensando la constante de calibración para que arranque en 0 barg)
+            simValSensor1 = constanteC;
+            simValSensor2 = constanteC;
+
+            // 2. Mostrar la ventana de sliders
+            SwingUtilities.invokeLater(this::mostrarVentanaSimuladorGrafico);
+
             dataThread = new Thread(() -> {
                 try {
                     double simulatedTime = 0.0;
-                    double simulatedVolt = constanteC;
-
-                    double targetVolt = (pressureRequested / factorA) + constanteC + 0.2;
 
                     while (!Thread.currentThread().isInterrupted()) {
-                        if (simulatedVolt < targetVolt) {
-                            simulatedVolt += 0.02 + (Math.random() * 0.015);
-                        } else {
-                            simulatedVolt += (Math.random() * 0.02) - 0.01;
-                        }
-
+                        // 3. Tomamos la temperatura simulada
                         double tempRaw = (25.0 / factorATemp) + constanteCTemp + (Math.random() * 2.0 - 1.0);
 
+                        // 4. Formamos la trama usando los valores dinámicos de los SLIDERS
                         String simulatedData = String.format(java.util.Locale.US, "%.1f,%.4f,%.4f,%.2f",
-                                simulatedTime, simulatedVolt, simulatedVolt, tempRaw);
+                                simulatedTime, simValSensor1, simValSensor2, tempRaw);
 
+                        // La enviamos al procesador que ya tienes
                         processNewData(simulatedData);
 
-                        simulatedTime += 0.1;
+                        simulatedTime += 0.1; // 100 ms por ciclo
                         Thread.sleep(100);
                     }
                 } catch (InterruptedException e) {
@@ -678,6 +685,47 @@ public class RealTimeGraphGestor {
                 valores.set(i, convertido);
             }
         }
+    }
+
+    private void mostrarVentanaSimuladorGrafico() {
+        if (ventanaSimuladorGrafico != null && ventanaSimuladorGrafico.isVisible()) return;
+
+        ventanaSimuladorGrafico = new JFrame("Control Simulador Gráfica");
+        ventanaSimuladorGrafico.setSize(350, 200);
+        ventanaSimuladorGrafico.setLayout(new GridLayout(2, 1, 10, 10));
+        ventanaSimuladorGrafico.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        ventanaSimuladorGrafico.setAlwaysOnTop(true);
+        ventanaSimuladorGrafico.setLocationRelativeTo(view); // Centrar sobre la gráfica
+
+        // --- Slider para Sensor 1 (Crudo) ---
+        JPanel p1 = new JPanel(new BorderLayout(10, 0));
+        p1.setBorder(BorderFactory.createTitledBorder("CS-PT1200 Crudo"));
+        JSlider slider1 = new JSlider(0, 1500, (int)(simValSensor1 * 100));
+        JLabel lbl1 = new JLabel(String.format("%.2f", simValSensor1));
+
+        slider1.addChangeListener(e -> {
+            simValSensor1 = slider1.getValue() / 100.0;
+            lbl1.setText(String.format("%.2f", simValSensor1));
+        });
+        p1.add(slider1, BorderLayout.CENTER);
+        p1.add(lbl1, BorderLayout.EAST);
+
+        // --- Slider para Sensor 2 (Crudo) ---
+        JPanel p2 = new JPanel(new BorderLayout(10, 0));
+        p2.setBorder(BorderFactory.createTitledBorder("Endress-Hauser Crudo"));
+        JSlider slider2 = new JSlider(0, 12000, (int)(simValSensor2 * 100));
+        JLabel lbl2 = new JLabel(String.format("%.2f", simValSensor2));
+
+        slider2.addChangeListener(e -> {
+            simValSensor2 = slider2.getValue() / 100.0;
+            lbl2.setText(String.format("%.2f", simValSensor2));
+        });
+        p2.add(slider2, BorderLayout.CENTER);
+        p2.add(lbl2, BorderLayout.EAST);
+
+        ventanaSimuladorGrafico.add(p1);
+        ventanaSimuladorGrafico.add(p2);
+        ventanaSimuladorGrafico.setVisible(true);
     }
 
 }
