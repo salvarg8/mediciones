@@ -5,6 +5,7 @@ import com.mediciones.dao.ConfiguracionDAO;
 import com.mediciones.dao.RealTimeGraphDAO;
 import com.mediciones.model.*;
 import com.mediciones.reportes.ExcelGenerator;
+import com.mediciones.utils.ConversionUnidadesUtil;
 import com.mediciones.view.RealTimeGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +24,6 @@ public class RealTimeGraphGestor {
     private final RealTimeGraph view;
     private final RealTimeGraphDAO dao;
     private final UbicacionGestor ubicacionGestor;
-    private final ValvulaGestor valvulaGestor;
-    private final TipoValvulaGestor tipoValvulaGestor;
     private ConfiguracionDAO configDAO;
 
     private SerialPort comPort;
@@ -55,8 +54,6 @@ public class RealTimeGraphGestor {
         this.view = view;
         this.dao = new RealTimeGraphDAO();
         this.ubicacionGestor = new UbicacionGestor();
-        this.valvulaGestor = new ValvulaGestor();
-        this.tipoValvulaGestor = new TipoValvulaGestor();
         this.configDAO = new ConfiguracionDAO();
     }
 
@@ -169,6 +166,7 @@ public class RealTimeGraphGestor {
         maxReached = false;
         running = false;
         view.resetIndicators();
+        view.setInfoFieldsEnabled(true);
     }
 
     public void updatePressureRequestedValue(double pressure) {
@@ -281,14 +279,28 @@ public class RealTimeGraphGestor {
         try {
             String[] parts = data.split(",");
             if (parts.length >= 3) {
-                //double tiempo = Double.parseDouble(parts[0].trim());
                 double tiempo = (System.currentTimeMillis() - pcStartTime) / 1000.0;
                 double vSensorUno = Double.parseDouble(parts[1].trim());
                 double vSensorDos = Double.parseDouble(parts[2].trim());
                 double tempRaw = (parts.length > 3) ? Double.parseDouble(parts[3].trim()) : 0.0;
 
                 double currentV = selectedSensorType.equals("CS-PT1200") ? vSensorUno : vSensorDos;
-                double finalP = Math.max(0, (currentV - constanteC) * factorA);
+
+                // 1. Obtenemos el valor real base de fábrica (siempre en Barg)
+                double presionBarg = Math.max(0, (currentV - constanteC) * factorA);
+
+                // 2. Le preguntamos a la vista en qué unidad está trabajando el usuario y buscamos el Enum
+                String unidadActualStr = view.getUnidadSeleccionada();
+                ConversionUnidadesUtil.UnidadPresion unidadDestino = ConversionUnidadesUtil.UnidadPresion.PSIG;
+                if (unidadActualStr.equalsIgnoreCase("kg/cm²") || unidadActualStr.equalsIgnoreCase("kg/cm2")) {
+                    unidadDestino = ConversionUnidadesUtil.UnidadPresion.KGCM2;
+                } else if (unidadActualStr.equalsIgnoreCase("barg")) {
+                    unidadDestino = ConversionUnidadesUtil.UnidadPresion.BARG;
+                }
+
+                // 3. Usamos TU CLASE UTIL para aplicar la conversión segura en tiempo real
+                double finalP = ConversionUnidadesUtil.convertirPresion(presionBarg, ConversionUnidadesUtil.UnidadPresion.BARG, unidadDestino);
+
                 double finalT = factorATemp * (tempRaw - constanteCTemp);
 
                 lastTemperature = finalT;
@@ -414,9 +426,26 @@ public class RealTimeGraphGestor {
                 carpetaDestino.mkdirs();
             }
 
-            File archivoDestinoBase = new File(carpetaDestino, nombreArchivo);
-            String rutaUnica = obtenerRutaUnica(archivoDestinoBase.getAbsolutePath());
-            File archivoDestinoFinal = new File(rutaUnica);
+            // Definimos el archivo final directamente sin buscar nombres alternativos
+            File archivoDestinoFinal = new File(carpetaDestino, nombreArchivo);
+
+            // --- NUEVA VALIDACIÓN: Preguntar antes de sobrescribir ---
+            if (archivoDestinoFinal.exists()) {
+                int confirmacion = JOptionPane.showConfirmDialog(
+                        view, // Usamos 'view' para que el cuadro se centre en la ventana de la gráfica
+                        "El archivo '" + nombreArchivo + "' ya existe en esta ubicación.\n¿Desea sobrescribirlo?",
+                        "Confirmar Reemplazo",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                // Si el usuario elige "No" o cierra la ventana, abortamos el guardado
+                if (confirmacion != JOptionPane.YES_OPTION) {
+                    view.showMessage("Guardado cancelado por el usuario.");
+                    return;
+                }
+            }
+            // ---------------------------------------------------------
 
             new ExcelGenerator().generarExcel(this.medicionActual, archivoDestinoFinal.getAbsolutePath());
 
@@ -433,6 +462,8 @@ public class RealTimeGraphGestor {
                 logger.error("No se pudo abrir el archivo automáticamente: " + e.getMessage());
             }
 
+            resetValues();
+            view.clearChart();
         } catch (IOException ex) {
             view.showErrorMessage("Error al generar el reporte Excel: " + ex.getMessage());
             logger.error("Error al generar el reporte Excel: " + ex.getMessage(), ex);
@@ -448,36 +479,6 @@ public class RealTimeGraphGestor {
             view.showErrorMessage("Error al recargar el Portal:\n" + ex.getMessage());
             logger.error("Error al recargar el portal: " + ex.getMessage(), ex);
         }
-    }
-
-    private String obtenerRutaUnica(String rutaCompleta) {
-        java.io.File archivo = new java.io.File(rutaCompleta);
-
-        if (!archivo.exists()) {
-            return rutaCompleta;
-        }
-
-        String carpeta = archivo.getParent();
-        String nombreOriginal = archivo.getName();
-        String nombreSinExtension = nombreOriginal;
-        String extension = "";
-
-        int dotIndex = nombreOriginal.lastIndexOf('.');
-        if (dotIndex > 0) {
-            nombreSinExtension = nombreOriginal.substring(0, dotIndex);
-            extension = nombreOriginal.substring(dotIndex);
-        }
-
-        int contador = 1;
-        File nuevoArchivo;
-
-        do {
-            String nuevoNombre = nombreSinExtension + " (" + contador + ")" + extension;
-            nuevoArchivo = new File(carpeta, nuevoNombre);
-            contador++;
-        } while (nuevoArchivo.exists());
-
-        return nuevoArchivo.getAbsolutePath();
     }
 
     public void loadComboBoxData(JComboBox<Cliente> cmbCliente, JComboBox<Operador> cmbOperador, JComboBox<Fluido> cmbFluido, JComboBox<TipoValvula> cmbTipoValvula) {
@@ -518,14 +519,6 @@ public class RealTimeGraphGestor {
             for (TipoValvula tv : listaTipos) {
                 cmbTipo.addItem(tv);
             }
-        }
-    }
-
-    public void updateValvulas(JComboBox<Valvula> cmbValvula, Cliente cliente) {
-        try {
-            dao.cargarComboBoxValvulas(cmbValvula, cliente != null ? cliente.getId() : null);
-        } catch (Exception ex) {
-            view.showErrorMessage("Error al cargar válvulas: " + ex.getMessage());
         }
     }
 
@@ -639,28 +632,6 @@ public class RealTimeGraphGestor {
         }
     }
 
-    public void updateValvulasPorPlanta(JComboBox<Valvula> cmbValvula, Planta selected) {
-        if (cmbValvula == null) {
-            return;
-        }
-
-        cmbValvula.removeAllItems();
-
-        if (selected != null && selected.getValvulas() != null) {
-            List<Valvula> valvulasDePlanta = new ArrayList<>(selected.getValvulas());
-
-            valvulasDePlanta.sort((v1, v2) -> {
-                String tag1 = v1.getTag() == null ? "" : v1.getTag();
-                String tag2 = v2.getTag() == null ? "" : v2.getTag();
-                return tag1.compareToIgnoreCase(tag2);
-            });
-
-            for (Valvula valvula : valvulasDePlanta) {
-                cmbValvula.addItem(valvula);
-            }
-        }
-    }
-
     public void updatePlantas(JComboBox<Planta> cmbPlanta, Cliente selected) {
         if (cmbPlanta == null) {
             return;
@@ -690,4 +661,23 @@ public class RealTimeGraphGestor {
         grupoUnidades.add(rbtnKgCm2);
         grupoUnidades.add(rbtnBarg);
     }
+
+    public void aplicarCambioUnidad(ConversionUnidadesUtil.UnidadPresion origen, ConversionUnidadesUtil.UnidadPresion destino, String nuevaUnidad) {
+
+        this.maxValue = ConversionUnidadesUtil.convertirPresion(this.maxValue, origen, destino);
+
+        if (this.recValue != Double.MAX_VALUE) {
+            this.recValue = ConversionUnidadesUtil.convertirPresion(this.recValue, origen, destino);
+        }
+
+        if (this.medicionActual != null) {
+            this.medicionActual.setUnidadPresion(nuevaUnidad);
+            java.util.List<Double> valores = this.medicionActual.getValoresMedicion();
+            for (int i = 0; i < valores.size(); i++) {
+                double convertido = ConversionUnidadesUtil.convertirPresion(valores.get(i), origen, destino);
+                valores.set(i, convertido);
+            }
+        }
+    }
+
 }

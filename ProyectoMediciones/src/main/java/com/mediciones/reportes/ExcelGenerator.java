@@ -159,6 +159,7 @@ public class ExcelGenerator {
             escribirCelda(8, 6, conexionEntrada);
             escribirCelda(9, 6, conexionSalida);
             escribirCelda(48,0, medicion.getOperador().getNombre());
+            escribirCelda(25,6, medicion.getFluido().getNombre());
         }
     }
 
