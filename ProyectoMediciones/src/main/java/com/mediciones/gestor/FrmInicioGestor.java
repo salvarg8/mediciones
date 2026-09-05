@@ -7,6 +7,7 @@ import com.mediciones.utils.ConversionUnidadesUtil;
 import com.mediciones.view.FrmInicio;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -26,6 +27,12 @@ public class FrmInicioGestor {
 
     private double a1 = 1.0, c1 = 0.0;
     private double a2 = 1.0, c2 = 0.0;
+
+    // --- VARIABLES PARA EL PANEL DEL SIMULADOR ---
+    private volatile double simVal1 = 1.0;
+    private volatile double simVal2 = 100.0;
+    private JFrame ventanaSimulador;
+
 
     // --- NUEVA VARIABLE GLOBAL PARA ESCUCHAR CAMBIOS DE UNIDAD ---
     private volatile ConversionUnidadesUtil.UnidadPresion currentUnidadDestino = ConversionUnidadesUtil.UnidadPresion.KGCM2;
@@ -159,6 +166,12 @@ public class FrmInicioGestor {
         capturing = false;
         if (comPort != null && comPort.isOpen()) comPort.closePort();
         view.setEstadoComunicacion(false);
+
+        // Cerrar la ventana del simulador si estaba abierta
+        if (ventanaSimulador != null) {
+            ventanaSimulador.dispose();
+            ventanaSimulador = null;
+        }
     }
 
     private void procesarDatosSerial(
@@ -238,15 +251,15 @@ public class FrmInicioGestor {
 
         capturing = true;
 
-        Thread simuladorThread = new Thread(() -> {
-            double p1 = 1.0;
-            double p2 = 100.0;
+        // 1. Mostrar la ventanita flotante con los sliders
+        SwingUtilities.invokeLater(this::mostrarVentanaSimulador);
 
+        Thread simuladorThread = new Thread(() -> {
             while (capturing && !Thread.currentThread().isInterrupted()) {
                 try {
-                    String tramaFalsa = "0," + p1 + "," + p2;
+                    // 2. Usar los valores que vienen de los sliders en tiempo real
+                    String tramaFalsa = "0," + simVal1 + "," + simVal2;
 
-                    // EL SIMULADOR TAMBIÉN ESCUCHA LOS CLICS EN TIEMPO REAL
                     procesarDatosSerial(
                             tramaFalsa,
                             this.currentUnidadDestino,
@@ -263,5 +276,49 @@ public class FrmInicioGestor {
 
         simuladorThread.setDaemon(true);
         simuladorThread.start();
+    }
+
+    private void mostrarVentanaSimulador() {
+        // Si ya está abierta, no hacemos nada
+        if (ventanaSimulador != null && ventanaSimulador.isVisible()) return;
+
+        ventanaSimulador = new JFrame("Control Simulador");
+        ventanaSimulador.setSize(350, 200);
+        ventanaSimulador.setLayout(new GridLayout(2, 1, 10, 10));
+        ventanaSimulador.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        ventanaSimulador.setAlwaysOnTop(true); // Siempre visible encima del sistema
+        ventanaSimulador.setLocationRelativeTo(view); // Centrar respecto al inicio
+
+        // --- Slider para CS-PT1200 (0 a 10 barg) ---
+        JPanel p1 = new JPanel(new BorderLayout(10, 0));
+        p1.setBorder(BorderFactory.createTitledBorder("Sensor CS-PT1200 (barg)"));
+        // Rango 0 a 1000 (equivale a 0.00 a 10.00 barg)
+        JSlider slider1 = new JSlider(0, 1000, (int)(simVal1 * 100));
+        JLabel lbl1 = new JLabel(String.format("%.2f", simVal1));
+
+        slider1.addChangeListener(e -> {
+            simVal1 = slider1.getValue() / 100.0; // Convertir de vuelta a decimales
+            lbl1.setText(String.format("%.2f", simVal1));
+        });
+        p1.add(slider1, BorderLayout.CENTER);
+        p1.add(lbl1, BorderLayout.EAST);
+
+        // --- Slider para Endress-Hauser (0 a 100 barg) ---
+        JPanel p2 = new JPanel(new BorderLayout(10, 0));
+        p2.setBorder(BorderFactory.createTitledBorder("Sensor Endress-Hauser (barg)"));
+        // Rango 0 a 10000 (equivale a 0.00 a 100.00 barg)
+        JSlider slider2 = new JSlider(0, 10000, (int)(simVal2 * 100));
+        JLabel lbl2 = new JLabel(String.format("%.2f", simVal2));
+
+        slider2.addChangeListener(e -> {
+            simVal2 = slider2.getValue() / 100.0;
+            lbl2.setText(String.format("%.2f", simVal2));
+        });
+        p2.add(slider2, BorderLayout.CENTER);
+        p2.add(lbl2, BorderLayout.EAST);
+
+        ventanaSimulador.add(p1);
+        ventanaSimulador.add(p2);
+        ventanaSimulador.setVisible(true);
     }
 }
