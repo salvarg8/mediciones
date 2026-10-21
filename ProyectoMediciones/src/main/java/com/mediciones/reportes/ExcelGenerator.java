@@ -146,8 +146,8 @@ public class ExcelGenerator {
             String valorRecuperacion = (medicion.getRecuperacion() == Double.MAX_VALUE || medicion.getRecuperacion() == 0.0)
                     ? "0.00"
                     : String.format(java.util.Locale.US, "%.2f", medicion.getRecuperacion());
-            String conexionEntrada = "Ø " + valvula.getEntradaBridaDiametro() + " " + (valvula.getEntradaBridaSerie() != null ? valvula.getEntradaBridaSerie() : "");
-            String conexionSalida = "Ø " + valvula.getSalidaBridaDiametro() + " " + (valvula.getSalidaBridaSerie() != null ? valvula.getSalidaBridaSerie() : "");
+            String conexionEntrada = "Ø " + valvula.getEntradaBridaDiametro() + formatearSerieConexion(valvula.getEntradaBridaSerie());
+            String conexionSalida = "Ø " + valvula.getSalidaBridaDiametro() + formatearSerieConexion(valvula.getSalidaBridaSerie());
 
             escribirCelda(4, 1, nombreCliente);
             escribirCelda(7, 2, valvula.getMarca());
@@ -161,6 +161,13 @@ public class ExcelGenerator {
             escribirCelda(48,0, medicion.getOperador().getNombre());
             escribirCelda(25,6, medicion.getFluido().getNombre());
         }
+    }
+
+    private String formatearSerieConexion(String serie) {
+        if (serie == null || serie.trim().isEmpty() || "N/A".equalsIgnoreCase(serie.trim())) {
+            return "";
+        }
+        return " " + serie.trim();
     }
 
     private void escribirFechaActual() {
